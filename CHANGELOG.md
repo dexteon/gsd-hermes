@@ -6,12 +6,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.24.0] - 2026-03-15
+
 ### Added
-- **`/gsd:quick --research` flag** — Spawns focused research agent before planning, composable with `--discuss` and `--full`. Addresses the middle-ground gap between quick and full milestone workflows (#317)
+- **`/gsd:quick --research` flag** — Spawns focused research agent before planning, composable with `--discuss` and `--full` (#317)
+- **`inherit` model profile** for OpenCode — agents inherit the user's selected runtime model via `/model`
+- **Persistent debug knowledge base** — resolved debug sessions append to `.planning/debug/knowledge-base.md`, eliminating cold-start investigation on recurring issues
+- **Programmatic `/gsd:set-profile`** — runs as a script instead of LLM-driven workflow, executes in seconds instead of 30-40s
 
 ### Fixed
-- OpenCode agent frontmatter conversion — agents now get correct `name:`, `model: inherit`, `mode: subagent` instead of broken command-style conversion that stripped name and kept `color:`/`skills:`/`tools:`
-- Local install: workflow and reference files now get absolute path to `gsd-tools.cjs` instead of `$HOME/.claude/get-shit-done/`, so local installs work when GSD is outside `$HOME` and spawned subagents with empty `$HOME` still resolve the path (#820)
+- ROADMAP.md searches scoped to current milestone — multi-milestone projects no longer match phases from archived milestones
+- OpenCode agent frontmatter conversion — agents get correct `name:`, `model: inherit`, `mode: subagent`
+- `opencode.jsonc` config files respected during install (previously only `.json` was detected) (#1053)
+- Windows installer crash on EPERM/EACCES when scanning protected directories (#964)
+- `gsd-tools.cjs` uses absolute paths in all install types (#820)
+- Invalid `skills:` frontmatter removed from UI agent files
 
 ## [1.23.0] - 2026-03-15
 
@@ -1492,7 +1501,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - YOLO mode for autonomous execution
 - Interactive mode with checkpoints
 
-[Unreleased]: https://github.com/glittercowboy/get-shit-done/compare/v1.23.0...HEAD
+[Unreleased]: https://github.com/glittercowboy/get-shit-done/compare/v1.24.0...HEAD
+[1.24.0]: https://github.com/glittercowboy/get-shit-done/releases/tag/v1.24.0
 [1.23.0]: https://github.com/glittercowboy/get-shit-done/releases/tag/v1.23.0
 [1.22.4]: https://github.com/glittercowboy/get-shit-done/releases/tag/v1.22.4
 [1.22.3]: https://github.com/glittercowboy/get-shit-done/releases/tag/v1.22.3
