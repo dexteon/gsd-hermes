@@ -542,6 +542,8 @@ You're never locked in. The system adapts.
 | `/gsd:add-todo [desc]` | Capture idea for later |
 | `/gsd:check-todos` | List pending todos |
 | `/gsd:debug [desc]` | Systematic debugging with persistent state |
+| `/gsd:do <text>` | Route freeform text to the right GSD command automatically |
+| `/gsd:note <text>` | Zero-friction idea capture — append, list, or promote notes to todos |
 | `/gsd:quick [--full] [--discuss] [--research]` | Execute ad-hoc task with GSD guarantees (`--full` adds plan-checking and verification, `--discuss` gathers context first, `--research` investigates approaches before planning) |
 | `/gsd:health [--repair]` | Validate `.planning/` directory integrity, auto-repair with `--repair` |
 | `/gsd:stats` | Display project statistics — phases, plans, requirements, git metrics |
