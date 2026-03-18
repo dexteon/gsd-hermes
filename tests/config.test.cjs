@@ -11,7 +11,6 @@ const { test, describe, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 const { runGsdTools, createTempProject, cleanup } = require('./helpers.cjs');
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -77,122 +76,56 @@ describe('config-ensure-section command', () => {
     assert.strictEqual(secondOutput.reason, 'already_exists');
   });
 
-  // NOTE: This test touches ~/.gsd/ on the real filesystem. It uses save/restore
-  // try/finally and skips if the file already exists to avoid corrupting user config.
   test('detects Brave Search from file-based key', () => {
-    const homedir = os.homedir();
-    const gsdDir = path.join(homedir, '.gsd');
-    const braveKeyFile = path.join(gsdDir, 'brave_api_key');
+    // runGsdTools sandboxes HOME=tmpDir, so brave_api_key is written there —
+    // no real filesystem side effects, cleanup happens via afterEach.
+    const gsdDir = path.join(tmpDir, '.gsd');
+    fs.mkdirSync(gsdDir, { recursive: true });
+    fs.writeFileSync(path.join(gsdDir, 'brave_api_key'), 'test-key', 'utf-8');
 
-    // Skip if file already exists (don't mess with user's real config)
-    if (fs.existsSync(braveKeyFile)) {
-      return;
-    }
+    const result = runGsdTools('config-ensure-section', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
 
-    // Create .gsd dir and brave_api_key file
-    const gsdDirExisted = fs.existsSync(gsdDir);
-    try {
-      if (!gsdDirExisted) {
-        fs.mkdirSync(gsdDir, { recursive: true });
-      }
-      fs.writeFileSync(braveKeyFile, 'test-key', 'utf-8');
-
-      const result = runGsdTools('config-ensure-section', tmpDir);
-      assert.ok(result.success, `Command failed: ${result.error}`);
-
-      const config = readConfig(tmpDir);
-      assert.strictEqual(config.brave_search, true);
-    } finally {
-      // Clean up
-      try { fs.unlinkSync(braveKeyFile); } catch { /* ignore */ }
-      if (!gsdDirExisted) {
-        try { fs.rmdirSync(gsdDir); } catch { /* ignore if not empty */ }
-      }
-    }
+    const config = readConfig(tmpDir);
+    assert.strictEqual(config.brave_search, true);
   });
 
-  // NOTE: This test touches ~/.gsd/ on the real filesystem. It uses save/restore
-  // try/finally and skips if the file already exists to avoid corrupting user config.
   test('merges user defaults from defaults.json', () => {
-    const homedir = os.homedir();
-    const gsdDir = path.join(homedir, '.gsd');
-    const defaultsFile = path.join(gsdDir, 'defaults.json');
+    // runGsdTools sandboxes HOME=tmpDir, so defaults.json is written there —
+    // no real filesystem side effects, cleanup happens via afterEach.
+    const gsdDir = path.join(tmpDir, '.gsd');
+    fs.mkdirSync(gsdDir, { recursive: true });
+    fs.writeFileSync(path.join(gsdDir, 'defaults.json'), JSON.stringify({
+      model_profile: 'quality',
+      commit_docs: false,
+    }), 'utf-8');
 
-    // Save existing defaults if present
-    let existingDefaults = null;
-    const gsdDirExisted = fs.existsSync(gsdDir);
-    if (fs.existsSync(defaultsFile)) {
-      existingDefaults = fs.readFileSync(defaultsFile, 'utf-8');
-    }
+    const result = runGsdTools('config-ensure-section', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
 
-    try {
-      if (!gsdDirExisted) {
-        fs.mkdirSync(gsdDir, { recursive: true });
-      }
-      fs.writeFileSync(defaultsFile, JSON.stringify({
-        model_profile: 'quality',
-        commit_docs: false,
-      }), 'utf-8');
-
-      const result = runGsdTools('config-ensure-section', tmpDir);
-      assert.ok(result.success, `Command failed: ${result.error}`);
-
-      const config = readConfig(tmpDir);
-      assert.strictEqual(config.model_profile, 'quality', 'model_profile should be overridden');
-      assert.strictEqual(config.commit_docs, false, 'commit_docs should be overridden');
-      assert.ok(config.git && typeof config.git === 'object', 'git should be an object');
-      assert.strictEqual(typeof config.git.branching_strategy, 'string', 'git.branching_strategy should be a string');
-    } finally {
-      // Restore
-      if (existingDefaults !== null) {
-        fs.writeFileSync(defaultsFile, existingDefaults, 'utf-8');
-      } else {
-        try { fs.unlinkSync(defaultsFile); } catch { /* ignore */ }
-      }
-      if (!gsdDirExisted) {
-        try { fs.rmdirSync(gsdDir); } catch { /* ignore */ }
-      }
-    }
+    const config = readConfig(tmpDir);
+    assert.strictEqual(config.model_profile, 'quality', 'model_profile should be overridden');
+    assert.strictEqual(config.commit_docs, false, 'commit_docs should be overridden');
+    assert.ok(config.git && typeof config.git === 'object', 'git should be an object');
+    assert.strictEqual(typeof config.git.branching_strategy, 'string', 'git.branching_strategy should be a string');
   });
 
-  // NOTE: This test touches ~/.gsd/ on the real filesystem. It uses save/restore
-  // try/finally and skips if the file already exists to avoid corrupting user config.
   test('merges nested workflow keys from defaults.json preserving unset keys', () => {
-    const homedir = os.homedir();
-    const gsdDir = path.join(homedir, '.gsd');
-    const defaultsFile = path.join(gsdDir, 'defaults.json');
+    // runGsdTools sandboxes HOME=tmpDir, so defaults.json is written there —
+    // no real filesystem side effects, cleanup happens via afterEach.
+    const gsdDir = path.join(tmpDir, '.gsd');
+    fs.mkdirSync(gsdDir, { recursive: true });
+    fs.writeFileSync(path.join(gsdDir, 'defaults.json'), JSON.stringify({
+      workflow: { research: false },
+    }), 'utf-8');
 
-    let existingDefaults = null;
-    const gsdDirExisted = fs.existsSync(gsdDir);
-    if (fs.existsSync(defaultsFile)) {
-      existingDefaults = fs.readFileSync(defaultsFile, 'utf-8');
-    }
+    const result = runGsdTools('config-ensure-section', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
 
-    try {
-      if (!gsdDirExisted) {
-        fs.mkdirSync(gsdDir, { recursive: true });
-      }
-      fs.writeFileSync(defaultsFile, JSON.stringify({
-        workflow: { research: false },
-      }), 'utf-8');
-
-      const result = runGsdTools('config-ensure-section', tmpDir);
-      assert.ok(result.success, `Command failed: ${result.error}`);
-
-      const config = readConfig(tmpDir);
-      assert.strictEqual(config.workflow.research, false, 'research should be overridden');
-      assert.strictEqual(typeof config.workflow.plan_check, 'boolean', 'plan_check should be a boolean');
-      assert.strictEqual(typeof config.workflow.verifier, 'boolean', 'verifier should be a boolean');
-    } finally {
-      if (existingDefaults !== null) {
-        fs.writeFileSync(defaultsFile, existingDefaults, 'utf-8');
-      } else {
-        try { fs.unlinkSync(defaultsFile); } catch { /* ignore */ }
-      }
-      if (!gsdDirExisted) {
-        try { fs.rmdirSync(gsdDir); } catch { /* ignore */ }
-      }
-    }
+    const config = readConfig(tmpDir);
+    assert.strictEqual(config.workflow.research, false, 'research should be overridden');
+    assert.strictEqual(typeof config.workflow.plan_check, 'boolean', 'plan_check should be a boolean');
+    assert.strictEqual(typeof config.workflow.verifier, 'boolean', 'verifier should be a boolean');
   });
 });
 
