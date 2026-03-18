@@ -151,6 +151,21 @@ Usage: `/gsd:quick`
 Usage: `/gsd:quick --research --full`
 Result: Creates `.planning/quick/NNN-slug/PLAN.md`, `.planning/quick/NNN-slug/SUMMARY.md`
 
+---
+
+**`/gsd:fast [description]`**
+Execute a trivial task inline — no subagents, no planning files, no overhead.
+
+For tasks too small to justify planning: typo fixes, config changes, forgotten commits, simple additions. Runs in the current context, makes the change, commits, and logs to STATE.md.
+
+- No PLAN.md or SUMMARY.md created
+- No subagent spawned (runs inline)
+- ≤ 3 file edits — redirects to `/gsd:quick` if task is non-trivial
+- Atomic commit with conventional message
+
+Usage: `/gsd:fast "fix the typo in README"`
+Usage: `/gsd:fast "add .env to gitignore"`
+
 ### Roadmap Management
 
 **`/gsd:add-phase <description>`**
@@ -307,6 +322,20 @@ Validate built features through conversational UAT.
 - Ready for re-execution if issues found
 
 Usage: `/gsd:verify-work 3`
+
+### Ship Work
+
+**`/gsd:ship [phase]`**
+Create a PR from completed phase work with an auto-generated body.
+
+- Pushes branch to remote
+- Creates PR with summary from SUMMARY.md, VERIFICATION.md, REQUIREMENTS.md
+- Optionally requests code review
+- Updates STATE.md with shipping status
+
+Prerequisites: Phase verified, `gh` CLI installed and authenticated.
+
+Usage: `/gsd:ship 4` or `/gsd:ship 4 --draft`
 
 ### Milestone Auditing
 
