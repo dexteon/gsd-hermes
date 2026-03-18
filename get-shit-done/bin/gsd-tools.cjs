@@ -175,7 +175,7 @@ async function main() {
   const command = args[0];
 
   if (!command) {
-    error('Usage: gsd-tools <command> [args] [--raw] [--cwd <path>]\nCommands: state, resolve-model, find-phase, commit, verify-summary, verify, frontmatter, template, generate-slug, current-timestamp, list-todos, verify-path-exists, config-ensure-section, init');
+    error('Usage: gsd-tools <command> [args] [--raw] [--cwd <path>]\nCommands: state, resolve-model, find-phase, commit, verify-summary, verify, frontmatter, template, generate-slug, current-timestamp, list-todos, verify-path-exists, config-ensure-section, config-new-project, init');
   }
 
   switch (command) {
@@ -398,6 +398,11 @@ async function main() {
 
     case 'config-get': {
       config.cmdConfigGet(cwd, args[1], raw);
+      break;
+    }
+
+    case 'config-new-project': {
+      config.cmdConfigNewProject(cwd, args[1], raw);
       break;
     }
 

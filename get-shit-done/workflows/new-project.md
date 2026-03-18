@@ -166,23 +166,11 @@ AskUserQuestion([
 ])
 ```
 
-Create `.planning/config.json` with mode set to "yolo":
+Create `.planning/config.json` with all settings (CLI fills in remaining defaults automatically):
 
-```json
-{
-  "mode": "yolo",
-  "granularity": "[selected]",
-  "parallelization": true|false,
-  "commit_docs": true|false,
-  "model_profile": "quality|balanced|budget|inherit",
-  "workflow": {
-    "research": true|false,
-    "plan_check": true|false,
-    "verifier": true|false,
-    "nyquist_validation": depth !== "quick",
-    "auto_advance": true
-  }
-}
+```bash
+mkdir -p .planning
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-new-project '{"mode":"yolo","granularity":"[selected]","parallelization":true|false,"commit_docs":true|false,"model_profile":"quality|balanced|budget|inherit","workflow":{"research":true|false,"plan_check":true|false,"verifier":true|false,"nyquist_validation":true|false,"auto_advance":true}}'
 ```
 
 **If commit_docs = No:** Add `.planning/` to `.gitignore`.
@@ -467,23 +455,14 @@ questions: [
 ]
 ```
 
-Create `.planning/config.json` with all settings:
+Create `.planning/config.json` with all settings (CLI fills in remaining defaults automatically):
 
-```json
-{
-  "mode": "yolo|interactive",
-  "granularity": "coarse|standard|fine",
-  "parallelization": true|false,
-  "commit_docs": true|false,
-  "model_profile": "quality|balanced|budget|inherit",
-  "workflow": {
-    "research": true|false,
-    "plan_check": true|false,
-    "verifier": true|false,
-    "nyquist_validation": depth !== "quick"
-  }
-}
+```bash
+mkdir -p .planning
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-new-project '{"mode":"[yolo|interactive]","granularity":"[selected]","parallelization":true|false,"commit_docs":true|false,"model_profile":"quality|balanced|budget|inherit","workflow":{"research":true|false,"plan_check":true|false,"verifier":true|false}}'
 ```
+
+**Note:** Run `/gsd:settings` anytime to update model profile, workflow agents, branching strategy, and other preferences.
 
 **If commit_docs = No:**
 - Set `commit_docs: false` in config.json
@@ -497,8 +476,6 @@ Create `.planning/config.json` with all settings:
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "chore: add project config" --files .planning/config.json
 ```
-
-**Note:** Run `/gsd:settings` anytime to update these preferences.
 
 ## 5.5. Resolve Model Profile
 
