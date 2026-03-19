@@ -554,10 +554,7 @@ Use AskUserQuestion:
 - Auto-set `planning.commit_docs` to `false` (planning docs stay local in multi-repo workspaces)
 - Add `.planning/` to `.gitignore` if not already present
 
-Update the config file:
-```bash
-node ~/.claude/get-shit-done/bin/gsd-tools.cjs commit "chore: configure multi-repo workspace" --files .planning/config.json
-```
+Config changes are saved locally — no commit needed since `commit_docs` is `false` in multi-repo mode.
 
 **If no sub-repos found or user selects none:** Continue with no changes to config.
 
