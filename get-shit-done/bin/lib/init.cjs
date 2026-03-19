@@ -57,6 +57,7 @@ function cmdInitExecutePhase(cwd, phase, raw) {
 
     // Config flags
     commit_docs: config.commit_docs,
+    sub_repos: config.sub_repos,
     parallelization: config.parallelization,
     context_window: config.context_window,
     branching_strategy: config.branching_strategy,
