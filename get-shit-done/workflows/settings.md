@@ -172,6 +172,9 @@ Merge new settings into existing config.json:
     "context_warnings": true/false,
     "workflow_guard": true/false,
     "research_questions": true/false
+  },
+  "workflow": {
+    "text_mode": true/false  // Use plain-text questions instead of TUI menus (for /rc remote sessions)
   }
 }
 ```
