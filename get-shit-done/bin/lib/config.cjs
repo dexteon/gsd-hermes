@@ -13,7 +13,7 @@ const {
 
 const VALID_CONFIG_KEYS = new Set([
   'mode', 'granularity', 'parallelization', 'commit_docs', 'model_profile',
-  'search_gitignored', 'brave_search',
+  'search_gitignored', 'brave_search', 'firecrawl', 'exa_search',
   'workflow.research', 'workflow.plan_check', 'workflow.verifier',
   'workflow.nyquist_validation', 'workflow.ui_phase', 'workflow.ui_safety_gate',
   'workflow.auto_advance', 'workflow.node_repair', 'workflow.node_repair_budget',
@@ -55,9 +55,13 @@ function buildNewProjectConfig(userChoices) {
   const choices = userChoices || {};
   const homedir = require('os').homedir();
 
-  // Detect Brave Search API key availability
+  // Detect API key availability
   const braveKeyFile = path.join(homedir, '.gsd', 'brave_api_key');
   const hasBraveSearch = !!(process.env.BRAVE_API_KEY || fs.existsSync(braveKeyFile));
+  const firecrawlKeyFile = path.join(homedir, '.gsd', 'firecrawl_api_key');
+  const hasFirecrawl = !!(process.env.FIRECRAWL_API_KEY || fs.existsSync(firecrawlKeyFile));
+  const exaKeyFile = path.join(homedir, '.gsd', 'exa_api_key');
+  const hasExaSearch = !!(process.env.EXA_API_KEY || fs.existsSync(exaKeyFile));
 
   // Load user-level defaults from ~/.gsd/defaults.json if available
   const globalDefaultsPath = path.join(homedir, '.gsd', 'defaults.json');
@@ -85,6 +89,8 @@ function buildNewProjectConfig(userChoices) {
     parallelization: true,
     search_gitignored: false,
     brave_search: hasBraveSearch,
+    firecrawl: hasFirecrawl,
+    exa_search: hasExaSearch,
     git: {
       branching_strategy: 'none',
       phase_branch_template: 'gsd/phase-{phase}-{slug}',
