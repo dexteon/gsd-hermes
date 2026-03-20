@@ -922,7 +922,7 @@ function detectChildRepos(dir) {
 }
 
 function cmdInitNewWorkspace(cwd, raw) {
-  const homedir = require('os').homedir();
+  const homedir = process.env.HOME || require('os').homedir();
   const defaultBase = path.join(homedir, 'gsd-workspaces');
 
   // Detect child git repos for interactive selection
@@ -948,7 +948,7 @@ function cmdInitNewWorkspace(cwd, raw) {
 }
 
 function cmdInitListWorkspaces(cwd, raw) {
-  const homedir = require('os').homedir();
+  const homedir = process.env.HOME || require('os').homedir();
   const defaultBase = path.join(homedir, 'gsd-workspaces');
 
   const workspaces = [];
@@ -994,7 +994,7 @@ function cmdInitListWorkspaces(cwd, raw) {
 }
 
 function cmdInitRemoveWorkspace(cwd, name, raw) {
-  const homedir = require('os').homedir();
+  const homedir = process.env.HOME || require('os').homedir();
   const defaultBase = path.join(homedir, 'gsd-workspaces');
 
   if (!name) {
