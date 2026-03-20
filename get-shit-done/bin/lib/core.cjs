@@ -232,7 +232,15 @@ function loadConfig(cwd) {
 
     return {
       model_profile: get('model_profile') ?? defaults.model_profile,
-      commit_docs: get('commit_docs', { section: 'planning', field: 'commit_docs' }) ?? defaults.commit_docs,
+      commit_docs: (() => {
+        const explicit = get('commit_docs', { section: 'planning', field: 'commit_docs' });
+        // If explicitly set in config, respect the user's choice
+        if (explicit !== undefined) return explicit;
+        // Auto-detection: when no explicit value and .planning/ is gitignored,
+        // default to false instead of true
+        if (isGitIgnored(cwd, '.planning/')) return false;
+        return defaults.commit_docs;
+      })(),
       search_gitignored: get('search_gitignored', { section: 'planning', field: 'search_gitignored' }) ?? defaults.search_gitignored,
       branching_strategy: get('branching_strategy', { section: 'git', field: 'branching_strategy' }) ?? defaults.branching_strategy,
       phase_branch_template: get('phase_branch_template', { section: 'git', field: 'phase_branch_template' }) ?? defaults.phase_branch_template,
