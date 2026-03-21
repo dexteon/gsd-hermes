@@ -10,7 +10,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { output, error, planningPaths, planningRoot, toPosixPath, getMilestoneInfo, generateSlugInternal, setActiveWorkstream, getActiveWorkstream } = require('./core.cjs');
+const { output, error, planningPaths, planningRoot, toPosixPath, getMilestoneInfo, generateSlugInternal, setActiveWorkstream, getActiveWorkstream, filterPlanFiles, filterSummaryFiles, readSubdirectories } = require('./core.cjs');
+const { stateExtractField } = require('./state.cjs');
 
 // ─── Migration ──────────────────────────────────────────────────────────────
 
@@ -184,25 +185,23 @@ function cmdWorkstreamList(cwd, raw) {
     const wsDir = path.join(wsRoot, entry.name);
     const phasesDir = path.join(wsDir, 'phases');
 
-    let phaseCount = 0, completedCount = 0;
-    try {
-      const dirs = fs.readdirSync(phasesDir, { withFileTypes: true }).filter(e => e.isDirectory());
-      phaseCount = dirs.length;
-      for (const d of dirs) {
-        const files = fs.readdirSync(path.join(phasesDir, d.name));
-        const plans = files.filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
-        const summaries = files.filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
+    const phaseDirs = readSubdirectories(phasesDir);
+    const phaseCount = phaseDirs.length;
+    let completedCount = 0;
+    for (const d of phaseDirs) {
+      try {
+        const phaseFiles = fs.readdirSync(path.join(phasesDir, d));
+        const plans = filterPlanFiles(phaseFiles);
+        const summaries = filterSummaryFiles(phaseFiles);
         if (plans.length > 0 && summaries.length >= plans.length) completedCount++;
-      }
-    } catch {}
+      } catch {}
+    }
 
     let status = 'unknown', currentPhase = null;
     try {
       const stateContent = fs.readFileSync(path.join(wsDir, 'STATE.md'), 'utf-8');
-      const statusMatch = stateContent.match(/\*\*Status:\*\*\s*(.+)/);
-      if (statusMatch) status = statusMatch[1].trim();
-      const phaseMatch = stateContent.match(/\*\*Current Phase:\*\*\s*(.+)/);
-      if (phaseMatch) currentPhase = phaseMatch[1].trim();
+      status = stateExtractField(stateContent, 'Status') || 'unknown';
+      currentPhase = stateExtractField(stateContent, 'Current Phase');
     } catch {}
 
     workstreams.push({
@@ -240,14 +239,11 @@ function cmdWorkstreamStatus(cwd, name, raw) {
   };
 
   const phases = [];
-  try {
-    const dirs = fs.readdirSync(p.phases, { withFileTypes: true })
-      .filter(e => e.isDirectory()).map(e => e.name).sort();
-    for (const dir of dirs) {
-      const phasePath = path.join(p.phases, dir);
-      const phaseFiles = fs.readdirSync(phasePath);
-      const plans = phaseFiles.filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
-      const summaries = phaseFiles.filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
+  for (const dir of readSubdirectories(p.phases).sort()) {
+    try {
+      const phaseFiles = fs.readdirSync(path.join(p.phases, dir));
+      const plans = filterPlanFiles(phaseFiles);
+      const summaries = filterSummaryFiles(phaseFiles);
       phases.push({
         directory: dir,
         status: summaries.length >= plans.length && plans.length > 0 ? 'complete' :
@@ -255,19 +251,16 @@ function cmdWorkstreamStatus(cwd, name, raw) {
         plan_count: plans.length,
         summary_count: summaries.length,
       });
-    }
-  } catch {}
+    } catch {}
+  }
 
   let stateInfo = {};
   try {
     const stateContent = fs.readFileSync(p.state, 'utf-8');
-    const statusMatch = stateContent.match(/\*\*Status:\*\*\s*(.+)/);
-    const phaseMatch = stateContent.match(/\*\*Current Phase:\*\*\s*(.+)/);
-    const activityMatch = stateContent.match(/\*\*Last Activity:\*\*\s*(.+)/);
     stateInfo = {
-      status: statusMatch ? statusMatch[1].trim() : 'unknown',
-      current_phase: phaseMatch ? phaseMatch[1].trim() : null,
-      last_activity: activityMatch ? activityMatch[1].trim() : null,
+      status: stateExtractField(stateContent, 'Status') || 'unknown',
+      current_phase: stateExtractField(stateContent, 'Current Phase'),
+      last_activity: stateExtractField(stateContent, 'Last Activity'),
     };
   } catch {}
 
@@ -392,19 +385,19 @@ function cmdWorkstreamProgress(cwd, raw) {
     const wsDir = path.join(wsRoot, entry.name);
     const phasesDir = path.join(wsDir, 'phases');
 
-    let phaseCount = 0, completedCount = 0, totalPlans = 0, completedPlans = 0;
-    try {
-      const dirs = fs.readdirSync(phasesDir, { withFileTypes: true }).filter(e => e.isDirectory());
-      phaseCount = dirs.length;
-      for (const d of dirs) {
-        const files = fs.readdirSync(path.join(phasesDir, d.name));
-        const plans = files.filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
-        const summaries = files.filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
+    const phaseDirsProgress = readSubdirectories(phasesDir);
+    const phaseCount = phaseDirsProgress.length;
+    let completedCount = 0, totalPlans = 0, completedPlans = 0;
+    for (const d of phaseDirsProgress) {
+      try {
+        const phaseFiles = fs.readdirSync(path.join(phasesDir, d));
+        const plans = filterPlanFiles(phaseFiles);
+        const summaries = filterSummaryFiles(phaseFiles);
         totalPlans += plans.length;
         completedPlans += Math.min(summaries.length, plans.length);
         if (plans.length > 0 && summaries.length >= plans.length) completedCount++;
-      }
-    } catch {}
+      } catch {}
+    }
 
     let roadmapPhaseCount = phaseCount;
     try {
@@ -416,10 +409,8 @@ function cmdWorkstreamProgress(cwd, raw) {
     let status = 'unknown', currentPhase = null;
     try {
       const stateContent = fs.readFileSync(path.join(wsDir, 'STATE.md'), 'utf-8');
-      const statusMatch = stateContent.match(/\*\*Status:\*\*\s*(.+)/);
-      if (statusMatch) status = statusMatch[1].trim();
-      const phaseMatch = stateContent.match(/\*\*Current Phase:\*\*\s*(.+)/);
-      if (phaseMatch) currentPhase = phaseMatch[1].trim();
+      status = stateExtractField(stateContent, 'Status') || 'unknown';
+      currentPhase = stateExtractField(stateContent, 'Current Phase');
     } catch {}
 
     workstreams.push({
@@ -459,10 +450,8 @@ function getOtherActiveWorkstreams(cwd, excludeWs) {
     let status = 'unknown', currentPhase = null;
     try {
       const content = fs.readFileSync(statePath, 'utf-8');
-      const statusMatch = content.match(/\*\*Status:\*\*\s*(.+)/);
-      if (statusMatch) status = statusMatch[1].trim();
-      const phaseMatch = content.match(/\*\*Current Phase:\*\*\s*(.+)/);
-      if (phaseMatch) currentPhase = phaseMatch[1].trim();
+      status = stateExtractField(content, 'Status') || 'unknown';
+      currentPhase = stateExtractField(content, 'Current Phase');
     } catch {}
 
     if (status.toLowerCase().includes('milestone complete') ||
@@ -470,18 +459,18 @@ function getOtherActiveWorkstreams(cwd, excludeWs) {
       continue;
     }
 
-    let phaseCount = 0, completedCount = 0;
-    try {
-      const phasesDir = path.join(wsDir, 'phases');
-      const dirs = fs.readdirSync(phasesDir, { withFileTypes: true }).filter(e => e.isDirectory());
-      phaseCount = dirs.length;
-      for (const d of dirs) {
-        const files = fs.readdirSync(path.join(phasesDir, d.name));
-        const plans = files.filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
-        const summaries = files.filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
+    const phasesDir = path.join(wsDir, 'phases');
+    const phaseDirsOther = readSubdirectories(phasesDir);
+    const phaseCount = phaseDirsOther.length;
+    let completedCount = 0;
+    for (const d of phaseDirsOther) {
+      try {
+        const phaseFiles = fs.readdirSync(path.join(phasesDir, d));
+        const plans = filterPlanFiles(phaseFiles);
+        const summaries = filterSummaryFiles(phaseFiles);
         if (plans.length > 0 && summaries.length >= plans.length) completedCount++;
-      }
-    } catch {}
+      } catch {}
+    }
 
     others.push({ name: entry.name, status, current_phase: currentPhase, phases: `${completedCount}/${phaseCount}` });
   }

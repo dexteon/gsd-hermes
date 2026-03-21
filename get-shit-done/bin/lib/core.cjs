@@ -643,8 +643,7 @@ function comparePhaseNum(a, b) {
 
 function searchPhaseInDir(baseDir, relBase, normalized) {
   try {
-    const entries = fs.readdirSync(baseDir, { withFileTypes: true });
-    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => comparePhaseNum(a, b));
+    const dirs = readSubdirectories(baseDir, true);
     // Match: starts with normalized (numeric) OR contains normalized as prefix segment (custom ID)
     const match = dirs.find(d => {
       if (d.startsWith(normalized)) return true;
@@ -661,14 +660,9 @@ function searchPhaseInDir(baseDir, relBase, normalized) {
     const phaseNumber = dirMatch ? dirMatch[1] : normalized;
     const phaseName = dirMatch && dirMatch[2] ? dirMatch[2] : null;
     const phaseDir = path.join(baseDir, match);
-    const phaseFiles = fs.readdirSync(phaseDir);
-
-    const plans = phaseFiles.filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md').sort();
-    const summaries = phaseFiles.filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md').sort();
-    const hasResearch = phaseFiles.some(f => f.endsWith('-RESEARCH.md') || f === 'RESEARCH.md');
-    const hasContext = phaseFiles.some(f => f.endsWith('-CONTEXT.md') || f === 'CONTEXT.md');
-    const hasVerification = phaseFiles.some(f => f.endsWith('-VERIFICATION.md') || f === 'VERIFICATION.md');
-    const hasReviews = phaseFiles.some(f => f.endsWith('-REVIEWS.md') || f === 'REVIEWS.md');
+    const { plans: unsortedPlans, summaries: unsortedSummaries, hasResearch, hasContext, hasVerification, hasReviews } = getPhaseFileStats(phaseDir);
+    const plans = unsortedPlans.sort();
+    const summaries = unsortedSummaries.sort();
 
     const completedPlanIds = new Set(
       summaries.map(s => s.replace('-SUMMARY.md', '').replace('SUMMARY.md', ''))
@@ -753,8 +747,7 @@ function getArchivedPhaseDirs(cwd) {
     for (const archiveName of phaseDirs) {
       const version = archiveName.match(/^(v[\d.]+)-phases$/)[1];
       const archivePath = path.join(milestonesDir, archiveName);
-      const entries = fs.readdirSync(archivePath, { withFileTypes: true });
-      const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => comparePhaseNum(a, b));
+      const dirs = readSubdirectories(archivePath, true);
 
       for (const dir of dirs) {
         results.push({
@@ -1077,6 +1070,50 @@ function getMilestonePhaseFilter(cwd) {
   return isDirInMilestone;
 }
 
+// ─── Phase file helpers ──────────────────────────────────────────────────────
+
+/** Filter a file list to just PLAN.md / *-PLAN.md entries. */
+function filterPlanFiles(files) {
+  return files.filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
+}
+
+/** Filter a file list to just SUMMARY.md / *-SUMMARY.md entries. */
+function filterSummaryFiles(files) {
+  return files.filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
+}
+
+/**
+ * Read a phase directory and return counts/flags for common file types.
+ * Returns an object with plans[], summaries[], and boolean flags for
+ * research/context/verification files.
+ */
+function getPhaseFileStats(phaseDir) {
+  const files = fs.readdirSync(phaseDir);
+  return {
+    plans: filterPlanFiles(files),
+    summaries: filterSummaryFiles(files),
+    hasResearch: files.some(f => f.endsWith('-RESEARCH.md') || f === 'RESEARCH.md'),
+    hasContext: files.some(f => f.endsWith('-CONTEXT.md') || f === 'CONTEXT.md'),
+    hasVerification: files.some(f => f.endsWith('-VERIFICATION.md') || f === 'VERIFICATION.md'),
+    hasReviews: files.some(f => f.endsWith('-REVIEWS.md') || f === 'REVIEWS.md'),
+  };
+}
+
+/**
+ * Read immediate child directories from a path.
+ * Returns [] if the path doesn't exist or can't be read.
+ * Pass sort=true to apply comparePhaseNum ordering.
+ */
+function readSubdirectories(dirPath, sort = false) {
+  try {
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name);
+    return sort ? dirs.sort((a, b) => comparePhaseNum(a, b)) : dirs;
+  } catch {
+    return [];
+  }
+}
+
 module.exports = {
   output,
   error,
@@ -1113,4 +1150,8 @@ module.exports = {
   planningPaths,
   getActiveWorkstream,
   setActiveWorkstream,
+  filterPlanFiles,
+  filterSummaryFiles,
+  getPhaseFileStats,
+  readSubdirectories,
 };

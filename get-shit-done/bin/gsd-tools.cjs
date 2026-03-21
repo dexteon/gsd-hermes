@@ -151,6 +151,30 @@ const profilePipeline = require('./lib/profile-pipeline.cjs');
 const profileOutput = require('./lib/profile-output.cjs');
 const workstream = require('./lib/workstream.cjs');
 
+// ─── Arg parsing helpers ──────────────────────────────────────────────────────
+
+/**
+ * Extract named --flag <value> pairs from an args array.
+ * Returns an object mapping flag names to their values (null if absent).
+ * Flags listed in `booleanFlags` are treated as boolean (no value consumed).
+ *
+ * parseNamedArgs(args, 'phase', 'plan')        → { phase: '3', plan: '1' }
+ * parseNamedArgs(args, [], ['amend', 'force'])  → { amend: true, force: false }
+ */
+function parseNamedArgs(args, valueFlags = [], booleanFlags = []) {
+  const result = {};
+  for (const flag of valueFlags) {
+    const idx = args.indexOf(`--${flag}`);
+    result[flag] = idx !== -1 && args[idx + 1] !== undefined && !args[idx + 1].startsWith('--')
+      ? args[idx + 1]
+      : null;
+  }
+  for (const flag of booleanFlags) {
+    result[flag] = args.includes(`--${flag}`);
+  }
+  return result;
+}
+
 // ─── CLI Router ───────────────────────────────────────────────────────────────
 
 async function main() {
@@ -329,74 +353,27 @@ async function runCommand(command, args, cwd, raw) {
       } else if (subcommand === 'advance-plan') {
         state.cmdStateAdvancePlan(cwd, raw);
       } else if (subcommand === 'record-metric') {
-        const phaseIdx = args.indexOf('--phase');
-        const planIdx = args.indexOf('--plan');
-        const durationIdx = args.indexOf('--duration');
-        const tasksIdx = args.indexOf('--tasks');
-        const filesIdx = args.indexOf('--files');
-        state.cmdStateRecordMetric(cwd, {
-          phase: phaseIdx !== -1 ? args[phaseIdx + 1] : null,
-          plan: planIdx !== -1 ? args[planIdx + 1] : null,
-          duration: durationIdx !== -1 ? args[durationIdx + 1] : null,
-          tasks: tasksIdx !== -1 ? args[tasksIdx + 1] : null,
-          files: filesIdx !== -1 ? args[filesIdx + 1] : null,
-        }, raw);
+        const { phase: p, plan, duration, tasks, files } = parseNamedArgs(args, ['phase', 'plan', 'duration', 'tasks', 'files']);
+        state.cmdStateRecordMetric(cwd, { phase: p, plan, duration, tasks, files }, raw);
       } else if (subcommand === 'update-progress') {
         state.cmdStateUpdateProgress(cwd, raw);
       } else if (subcommand === 'add-decision') {
-        const phaseIdx = args.indexOf('--phase');
-        const summaryIdx = args.indexOf('--summary');
-        const summaryFileIdx = args.indexOf('--summary-file');
-        const rationaleIdx = args.indexOf('--rationale');
-        const rationaleFileIdx = args.indexOf('--rationale-file');
-        state.cmdStateAddDecision(cwd, {
-          phase: phaseIdx !== -1 ? args[phaseIdx + 1] : null,
-          summary: summaryIdx !== -1 ? args[summaryIdx + 1] : null,
-          summary_file: summaryFileIdx !== -1 ? args[summaryFileIdx + 1] : null,
-          rationale: rationaleIdx !== -1 ? args[rationaleIdx + 1] : '',
-          rationale_file: rationaleFileIdx !== -1 ? args[rationaleFileIdx + 1] : null,
-        }, raw);
+        const { phase: p, summary, 'summary-file': summary_file, rationale, 'rationale-file': rationale_file } = parseNamedArgs(args, ['phase', 'summary', 'summary-file', 'rationale', 'rationale-file']);
+        state.cmdStateAddDecision(cwd, { phase: p, summary, summary_file, rationale: rationale || '', rationale_file }, raw);
       } else if (subcommand === 'add-blocker') {
-        const textIdx = args.indexOf('--text');
-        const textFileIdx = args.indexOf('--text-file');
-        state.cmdStateAddBlocker(cwd, {
-          text: textIdx !== -1 ? args[textIdx + 1] : null,
-          text_file: textFileIdx !== -1 ? args[textFileIdx + 1] : null,
-        }, raw);
+        const { text, 'text-file': text_file } = parseNamedArgs(args, ['text', 'text-file']);
+        state.cmdStateAddBlocker(cwd, { text, text_file }, raw);
       } else if (subcommand === 'resolve-blocker') {
-        const textIdx = args.indexOf('--text');
-        state.cmdStateResolveBlocker(cwd, textIdx !== -1 ? args[textIdx + 1] : null, raw);
+        state.cmdStateResolveBlocker(cwd, parseNamedArgs(args, ['text']).text, raw);
       } else if (subcommand === 'record-session') {
-        const stoppedIdx = args.indexOf('--stopped-at');
-        const resumeIdx = args.indexOf('--resume-file');
-        state.cmdStateRecordSession(cwd, {
-          stopped_at: stoppedIdx !== -1 ? args[stoppedIdx + 1] : null,
-          resume_file: resumeIdx !== -1 ? args[resumeIdx + 1] : 'None',
-        }, raw);
+        const { 'stopped-at': stopped_at, 'resume-file': resume_file } = parseNamedArgs(args, ['stopped-at', 'resume-file']);
+        state.cmdStateRecordSession(cwd, { stopped_at, resume_file: resume_file || 'None' }, raw);
       } else if (subcommand === 'begin-phase') {
-        const phaseIdx = args.indexOf('--phase');
-        const nameIdx = args.indexOf('--name');
-        const plansIdx = args.indexOf('--plans');
-        state.cmdStateBeginPhase(
-          cwd,
-          phaseIdx !== -1 ? args[phaseIdx + 1] : null,
-          nameIdx !== -1 ? args[nameIdx + 1] : null,
-          plansIdx !== -1 ? parseInt(args[plansIdx + 1], 10) : null,
-          raw
-        );
+        const { phase: p, name, plans } = parseNamedArgs(args, ['phase', 'name', 'plans']);
+        state.cmdStateBeginPhase(cwd, p, name, plans !== null ? parseInt(plans, 10) : null, raw);
       } else if (subcommand === 'signal-waiting') {
-        const typeIdx = args.indexOf('--type');
-        const qIdx = args.indexOf('--question');
-        const optIdx = args.indexOf('--options');
-        const phaseIdx = args.indexOf('--phase');
-        state.cmdSignalWaiting(
-          cwd,
-          typeIdx !== -1 ? args[typeIdx + 1] : null,
-          qIdx !== -1 ? args[qIdx + 1] : null,
-          optIdx !== -1 ? args[optIdx + 1] : null,
-          phaseIdx !== -1 ? args[phaseIdx + 1] : null,
-          raw
-        );
+        const { type, question, options, phase: p } = parseNamedArgs(args, ['type', 'question', 'options', 'phase']);
+        state.cmdSignalWaiting(cwd, type, question, options, p, raw);
       } else if (subcommand === 'signal-resume') {
         state.cmdSignalResume(cwd, raw);
       } else {
@@ -452,24 +429,18 @@ async function runCommand(command, args, cwd, raw) {
         template.cmdTemplateSelect(cwd, args[2], raw);
       } else if (subcommand === 'fill') {
         const templateType = args[2];
-        const phaseIdx = args.indexOf('--phase');
-        const planIdx = args.indexOf('--plan');
-        const nameIdx = args.indexOf('--name');
-        const typeIdx = args.indexOf('--type');
-        const waveIdx = args.indexOf('--wave');
-        const fieldsIdx = args.indexOf('--fields');
+        const { phase, plan, name, type, wave, fields: fieldsRaw } = parseNamedArgs(args, ['phase', 'plan', 'name', 'type', 'wave', 'fields']);
+        let fields = {};
+        if (fieldsRaw) {
+          const { safeJsonParse } = require('./lib/security.cjs');
+          const result = safeJsonParse(fieldsRaw, { label: '--fields' });
+          if (!result.ok) error(result.error);
+          fields = result.value;
+        }
         template.cmdTemplateFill(cwd, templateType, {
-          phase: phaseIdx !== -1 ? args[phaseIdx + 1] : null,
-          plan: planIdx !== -1 ? args[planIdx + 1] : null,
-          name: nameIdx !== -1 ? args[nameIdx + 1] : null,
-          type: typeIdx !== -1 ? args[typeIdx + 1] : 'execute',
-          wave: waveIdx !== -1 ? args[waveIdx + 1] : '1',
-          fields: fieldsIdx !== -1 ? (() => {
-            const { safeJsonParse } = require('./lib/security.cjs');
-            const result = safeJsonParse(args[fieldsIdx + 1], { label: '--fields' });
-            if (!result.ok) error(result.error);
-            return result.value;
-          })() : {},
+          phase, plan, name, fields,
+          type: type || 'execute',
+          wave: wave || '1',
         }, raw);
       } else {
         error('Unknown template subcommand. Available: select, fill');
@@ -481,18 +452,14 @@ async function runCommand(command, args, cwd, raw) {
       const subcommand = args[1];
       const file = args[2];
       if (subcommand === 'get') {
-        const fieldIdx = args.indexOf('--field');
-        frontmatter.cmdFrontmatterGet(cwd, file, fieldIdx !== -1 ? args[fieldIdx + 1] : null, raw);
+        frontmatter.cmdFrontmatterGet(cwd, file, parseNamedArgs(args, ['field']).field, raw);
       } else if (subcommand === 'set') {
-        const fieldIdx = args.indexOf('--field');
-        const valueIdx = args.indexOf('--value');
-        frontmatter.cmdFrontmatterSet(cwd, file, fieldIdx !== -1 ? args[fieldIdx + 1] : null, valueIdx !== -1 ? args[valueIdx + 1] : undefined, raw);
+        const { field, value } = parseNamedArgs(args, ['field', 'value']);
+        frontmatter.cmdFrontmatterSet(cwd, file, field, value !== null ? value : undefined, raw);
       } else if (subcommand === 'merge') {
-        const dataIdx = args.indexOf('--data');
-        frontmatter.cmdFrontmatterMerge(cwd, file, dataIdx !== -1 ? args[dataIdx + 1] : null, raw);
+        frontmatter.cmdFrontmatterMerge(cwd, file, parseNamedArgs(args, ['data']).data, raw);
       } else if (subcommand === 'validate') {
-        const schemaIdx = args.indexOf('--schema');
-        frontmatter.cmdFrontmatterValidate(cwd, file, schemaIdx !== -1 ? args[schemaIdx + 1] : null, raw);
+        frontmatter.cmdFrontmatterValidate(cwd, file, parseNamedArgs(args, ['schema']).schema, raw);
       } else {
         error('Unknown frontmatter subcommand. Available: get, set, merge, validate');
       }
