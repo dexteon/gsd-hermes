@@ -584,7 +584,7 @@ function getActiveWorkstream(cwd) {
  * Set the active workstream. Pass null to clear.
  */
 function setActiveWorkstream(cwd, name) {
-  const filePath = path.join(cwd, '.planning', 'active-workstream');
+  const filePath = path.join(planningRoot(cwd), 'active-workstream');
   if (!name) {
     try { fs.unlinkSync(filePath); } catch {}
     return;

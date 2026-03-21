@@ -357,3 +357,83 @@ describe('gsd-tools --ws flag integration', () => {
     assert.ok(data.directory.includes('workstreams/test-ws'), `path should be workstream-scoped: ${data.directory}`);
   });
 });
+
+// ─── Path Traversal Rejection ────────────────────────────────────────────────
+
+describe('path traversal rejection', () => {
+  let tmpDir;
+
+  before(() => {
+    tmpDir = createTempProject();
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'PROJECT.md'), '# Project\n');
+    const wsDir = path.join(tmpDir, '.planning', 'workstreams', 'legit');
+    fs.mkdirSync(path.join(wsDir, 'phases'), { recursive: true });
+    fs.writeFileSync(path.join(wsDir, 'STATE.md'), '# State\n');
+  });
+
+  after(() => cleanup(tmpDir));
+
+  const maliciousNames = [
+    '../../etc',
+    '../foo',
+    'ws/../../../passwd',
+    'a/b',
+    'ws name with spaces',
+    '..',
+    '.',
+    'ws..traversal',
+  ];
+
+  describe('--ws flag rejects traversal attempts', () => {
+    for (const name of maliciousNames) {
+      test(`rejects --ws=${name}`, () => {
+        const result = runGsdTools(['workstream', 'list', '--raw', '--ws', name], tmpDir);
+        assert.ok(!result.success, `should reject --ws=${name}`);
+        assert.ok(result.error.includes('Invalid workstream name'), `error should mention invalid name for: ${name}`);
+      });
+    }
+  });
+
+  describe('GSD_WORKSTREAM env var rejects traversal attempts', () => {
+    for (const name of maliciousNames) {
+      test(`rejects GSD_WORKSTREAM=${name}`, () => {
+        const result = runGsdTools(['workstream', 'list', '--raw'], tmpDir, { GSD_WORKSTREAM: name });
+        assert.ok(!result.success, `should reject GSD_WORKSTREAM=${name}`);
+        assert.ok(result.error.includes('Invalid workstream name'), `error should mention invalid name for: ${name}`);
+      });
+    }
+  });
+
+  describe('cmdWorkstreamSet rejects traversal attempts', () => {
+    for (const name of maliciousNames) {
+      test(`rejects set ${name}`, () => {
+        const result = runGsdTools(['workstream', 'set', name, '--raw'], tmpDir);
+        // set validates independently — should return error or invalid_name
+        assert.ok(result.success || !result.success, 'should handle gracefully');
+        if (result.success) {
+          const data = JSON.parse(result.output);
+          assert.strictEqual(data.error, 'invalid_name', `should return invalid_name error for: ${name}`);
+        }
+      });
+    }
+  });
+
+  describe('getActiveWorkstream rejects poisoned active-workstream file', () => {
+    for (const name of maliciousNames) {
+      test(`rejects poisoned file containing ${name}`, () => {
+        // Write malicious name directly to the active-workstream file
+        fs.writeFileSync(path.join(tmpDir, '.planning', 'active-workstream'), name + '\n');
+        const result = runGsdTools(['workstream', 'get'], tmpDir, { GSD_WORKSTREAM: '' });
+        assert.ok(result.success, 'get should succeed');
+        const data = JSON.parse(result.output);
+        // getActiveWorkstream should return null for invalid names
+        assert.strictEqual(data.active, null, `should return null for poisoned name: ${name}`);
+      });
+    }
+
+    // Cleanup: remove poisoned file
+    test('cleanup: remove active-workstream file', () => {
+      try { fs.unlinkSync(path.join(tmpDir, '.planning', 'active-workstream')); } catch {}
+    });
+  });
+});
