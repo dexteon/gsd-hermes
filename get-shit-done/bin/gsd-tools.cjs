@@ -175,6 +175,22 @@ function parseNamedArgs(args, valueFlags = [], booleanFlags = []) {
   return result;
 }
 
+/**
+ * Collect all tokens after --flag until the next --flag or end of args.
+ * Handles multi-word values like --name Foo Bar Version 1.
+ * Returns null if the flag is absent.
+ */
+function parseMultiwordArg(args, flag) {
+  const idx = args.indexOf(`--${flag}`);
+  if (idx === -1) return null;
+  const tokens = [];
+  for (let i = idx + 1; i < args.length; i++) {
+    if (args[i].startsWith('--')) break;
+    tokens.push(args[i]);
+  }
+  return tokens.length > 0 ? tokens.join(' ') : null;
+}
+
 // ─── CLI Router ───────────────────────────────────────────────────────────────
 
 async function main() {
@@ -610,18 +626,8 @@ async function runCommand(command, args, cwd, raw) {
     case 'milestone': {
       const subcommand = args[1];
       if (subcommand === 'complete') {
-        const nameIndex = args.indexOf('--name');
+        const milestoneName = parseMultiwordArg(args, 'name');
         const archivePhases = args.includes('--archive-phases');
-        // Collect --name value (everything after --name until next flag or end)
-        let milestoneName = null;
-        if (nameIndex !== -1) {
-          const nameArgs = [];
-          for (let i = nameIndex + 1; i < args.length; i++) {
-            if (args[i].startsWith('--')) break;
-            nameArgs.push(args[i]);
-          }
-          milestoneName = nameArgs.join(' ') || null;
-        }
         milestone.cmdMilestoneComplete(cwd, args[2], { name: milestoneName, archivePhases }, raw);
       } else {
         error('Unknown milestone subcommand. Available: complete');
@@ -674,11 +680,9 @@ async function runCommand(command, args, cwd, raw) {
 
     case 'scaffold': {
       const scaffoldType = args[1];
-      const phaseIndex = args.indexOf('--phase');
-      const nameIndex = args.indexOf('--name');
       const scaffoldOptions = {
-        phase: phaseIndex !== -1 ? args[phaseIndex + 1] : null,
-        name: nameIndex !== -1 ? args.slice(nameIndex + 1).join(' ') : null,
+        phase: parseNamedArgs(args, ['phase']).phase,
+        name: parseMultiwordArg(args, 'name'),
       };
       commands.cmdScaffold(cwd, scaffoldType, scaffoldOptions, raw);
       break;
