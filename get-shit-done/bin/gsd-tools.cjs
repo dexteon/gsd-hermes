@@ -205,6 +205,10 @@ async function main() {
   } else {
     ws = getActiveWorkstream(cwd);
   }
+  // Validate workstream name to prevent path traversal attacks.
+  if (ws && !/^[a-zA-Z0-9_-]+$/.test(ws)) {
+    error('Invalid workstream name: must be alphanumeric, hyphens, and underscores only');
+  }
   // Set env var so all modules (planningDir, planningPaths) auto-resolve workstream paths
   if (ws) {
     process.env.GSD_WORKSTREAM = ws;

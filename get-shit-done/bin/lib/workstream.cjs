@@ -352,6 +352,11 @@ function cmdWorkstreamSet(cwd, name, raw) {
     return;
   }
 
+  if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+    output({ active: null, error: 'invalid_name', message: 'Workstream name must be alphanumeric, hyphens, and underscores only' }, raw);
+    return;
+  }
+
   const wsDir = path.join(planningRoot(cwd), 'workstreams', name);
   if (!fs.existsSync(wsDir)) {
     output({ active: null, error: 'not_found', workstream: name }, raw);

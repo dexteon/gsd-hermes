@@ -568,11 +568,11 @@ function planningPaths(cwd, ws) {
  * Returns null if no active workstream or file doesn't exist.
  */
 function getActiveWorkstream(cwd) {
-  const filePath = path.join(cwd, '.planning', 'active-workstream');
+  const filePath = path.join(planningRoot(cwd), 'active-workstream');
   try {
     const name = fs.readFileSync(filePath, 'utf-8').trim();
-    if (!name) return null;
-    const wsDir = path.join(cwd, '.planning', 'workstreams', name);
+    if (!name || !/^[a-zA-Z0-9_-]+$/.test(name)) return null;
+    const wsDir = path.join(planningRoot(cwd), 'workstreams', name);
     if (!fs.existsSync(wsDir)) return null;
     return name;
   } catch {
