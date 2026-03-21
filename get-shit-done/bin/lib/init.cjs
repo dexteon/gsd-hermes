@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { loadConfig, resolveModelInternal, findPhaseInternal, getRoadmapPhaseInternal, pathExistsInternal, generateSlugInternal, getMilestoneInfo, getMilestonePhaseFilter, stripShippedMilestones, extractCurrentMilestone, normalizePhaseName, toPosixPath, output, error } = require('./core.cjs');
+const { loadConfig, resolveModelInternal, findPhaseInternal, getRoadmapPhaseInternal, pathExistsInternal, generateSlugInternal, getMilestoneInfo, getMilestonePhaseFilter, stripShippedMilestones, extractCurrentMilestone, normalizePhaseName, planningPaths, toPosixPath, output, error } = require('./core.cjs');
 
 function getLatestCompletedMilestone(cwd) {
   const milestonesPath = path.join(cwd, '.planning', 'MILESTONES.md');
@@ -765,19 +765,20 @@ function cmdInitManager(cwd, raw) {
   const config = loadConfig(cwd);
   const milestone = getMilestoneInfo(cwd);
 
+  // Use planningPaths for forward-compatibility with workstream scoping (#1268)
+  const paths = planningPaths(cwd);
+
   // Validate prerequisites
-  if (!pathExistsInternal(cwd, '.planning/ROADMAP.md')) {
+  if (!fs.existsSync(paths.roadmap)) {
     error('No ROADMAP.md found. Run /gsd:new-milestone first.');
   }
-  if (!pathExistsInternal(cwd, '.planning/STATE.md')) {
+  if (!fs.existsSync(paths.state)) {
     error('No STATE.md found. Run /gsd:new-milestone first.');
   }
-
-  // Use roadmap analysis for rich phase data (depends_on, disk_status, has_context, etc.)
-  const roadmapPath = path.join(cwd, '.planning', 'ROADMAP.md');
-  const rawContent = fs.readFileSync(roadmapPath, 'utf-8');
+  const rawContent = fs.readFileSync(paths.roadmap, 'utf-8');
   const content = extractCurrentMilestone(rawContent, cwd);
-  const phasesDir = path.join(cwd, '.planning', 'phases');
+  const phasesDir = paths.phases;
+  const isDirInMilestone = getMilestonePhaseFilter(cwd);
 
   const phasePattern = /#{2,4}\s*Phase\s+(\d+[A-Z]?(?:\.\d+)*)\s*:\s*([^\n]+)/gi;
   const phases = [];
@@ -810,7 +811,7 @@ function cmdInitManager(cwd, raw) {
 
     try {
       const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
-      const dirs = entries.filter(e => e.isDirectory()).map(e => e.name);
+      const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).filter(isDirInMilestone);
       const dirMatch = dirs.find(d => d.startsWith(normalized + '-') || d === normalized);
 
       if (dirMatch) {
@@ -1004,7 +1005,7 @@ function cmdInitManager(cwd, raw) {
     state_exists: true,
   };
 
-  output(result, raw);
+  output(withProjectRoot(cwd, result), raw);
 }
 
 function cmdInitProgress(cwd, raw) {

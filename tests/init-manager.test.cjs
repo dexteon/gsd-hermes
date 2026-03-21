@@ -358,4 +358,59 @@ describe('init manager', () => {
     assert.strictEqual(output.phases[0].is_active, true);
     assert.ok(output.phases[0].last_activity !== null);
   });
+
+  test('conflict filter: blocks dependent phase execute when dep is active', () => {
+    writeState(tmpDir);
+    writeRoadmap(tmpDir, [
+      { number: '1', name: 'Foundation', complete: true },
+      { number: '2', name: 'API Layer', depends_on: 'Phase 1' },
+      { number: '3', name: 'Auth', depends_on: 'Phase 2' },
+    ]);
+
+    // Phase 2: partial (actively executing — has 2 plans, 1 summary)
+    scaffoldPhase(tmpDir, 2, { slug: 'api-layer', context: true, plans: 2, summaries: 1 });
+    // Phase 3: planned and deps would be met if Phase 2 were complete, but it's not
+    scaffoldPhase(tmpDir, 3, { slug: 'auth', context: true, plans: 1 });
+
+    const result = runGsdTools('init manager', tmpDir);
+    const output = JSON.parse(result.output);
+
+    // Phase 2 is partial — should NOT appear as execute recommendation (already running)
+    // Phase 3 deps_satisfied is false (Phase 2 not complete) — also no recommendation
+    const execRecs = output.recommended_actions.filter(r => r.action === 'execute');
+    assert.strictEqual(execRecs.length, 0);
+  });
+
+  test('conflict filter: allows independent phase execute in parallel', () => {
+    writeState(tmpDir);
+    writeRoadmap(tmpDir, [
+      { number: '1', name: 'Foundation', complete: true },
+      { number: '2', name: 'API Layer', depends_on: 'Phase 1' },
+      { number: '3', name: 'Notifications' }, // no deps — independent
+    ]);
+
+    // Phase 2: partial (actively executing)
+    scaffoldPhase(tmpDir, 2, { slug: 'api-layer', context: true, plans: 2, summaries: 1 });
+    // Phase 3: planned, no deps — independent of Phase 2
+    scaffoldPhase(tmpDir, 3, { slug: 'notifications', context: true, plans: 1 });
+
+    const result = runGsdTools('init manager', tmpDir);
+    const output = JSON.parse(result.output);
+
+    // Phase 3 is independent of Phase 2 — should be recommended for execution
+    const execRecs = output.recommended_actions.filter(r => r.action === 'execute');
+    assert.strictEqual(execRecs.length, 1);
+    assert.strictEqual(execRecs[0].phase, '3');
+  });
+
+  test('output includes project_root field', () => {
+    writeState(tmpDir);
+    writeRoadmap(tmpDir, [{ number: '1', name: 'Test' }]);
+
+    const result = runGsdTools('init manager', tmpDir);
+    const output = JSON.parse(result.output);
+
+    // macOS resolves /var → /private/var; normalize both sides
+    assert.strictEqual(fs.realpathSync(output.project_root), fs.realpathSync(tmpDir));
+  });
 });
