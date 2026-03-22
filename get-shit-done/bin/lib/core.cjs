@@ -589,6 +589,9 @@ function setActiveWorkstream(cwd, name) {
     try { fs.unlinkSync(filePath); } catch {}
     return;
   }
+  if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+    throw new Error('Invalid workstream name: must be alphanumeric, hyphens, and underscores only');
+  }
   fs.writeFileSync(filePath, name + '\n', 'utf-8');
 }
 
