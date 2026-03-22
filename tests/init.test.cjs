@@ -63,8 +63,10 @@ describe('init commands', () => {
 
   test('init plan-phase exposes text_mode true when set in config', () => {
     const configPath = path.join(tmpDir, '.planning', 'config.json');
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    config.workflow = { ...(config.workflow || {}), text_mode: true };
+    const existing = fs.existsSync(configPath)
+      ? JSON.parse(fs.readFileSync(configPath, 'utf8'))
+      : {};
+    const config = { ...existing, workflow: { ...(existing.workflow || {}), text_mode: true } };
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
     const result = runGsdTools('init plan-phase 03', tmpDir);
