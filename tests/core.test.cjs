@@ -1044,9 +1044,14 @@ describe('resolveWorktreeRoot', () => {
 describe('resolveWorktreeRoot with linked worktree .planning/', () => {
   const { resolveWorktreeRoot } = require('../get-shit-done/bin/lib/core.cjs');
   const { execSync } = require('child_process');
+  // On Windows CI, os.tmpdir() may return 8.3 short paths (RUNNER~1) while
+  // git returns long paths (runneradmin). realpathSync.native resolves both.
+  const normalizePath = (p) => {
+    try { return fs.realpathSync.native(p); } catch { return fs.realpathSync(p); }
+  };
 
   test('returns linked worktree cwd when it has its own .planning/', () => {
-    const mainDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-wt-main-')));
+    const mainDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-wt-main-')));
     let worktreeDir;
     try {
       // Set up main repo with a commit
@@ -1060,7 +1065,7 @@ describe('resolveWorktreeRoot with linked worktree .planning/', () => {
       execSync('git commit -m "initial"', { cwd: mainDir, stdio: 'pipe' });
 
       // Create a linked worktree
-      worktreeDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-wt-linked-')));
+      worktreeDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-wt-linked-')));
       fs.rmSync(worktreeDir, { recursive: true, force: true });
       execSync(`git worktree add "${worktreeDir}" -b test-linked`, { cwd: mainDir, stdio: 'pipe' });
 
@@ -1068,7 +1073,7 @@ describe('resolveWorktreeRoot with linked worktree .planning/', () => {
       fs.mkdirSync(path.join(worktreeDir, '.planning'), { recursive: true });
 
       // resolveWorktreeRoot should return the linked worktree dir, not the main repo
-      const result = resolveWorktreeRoot(worktreeDir);
+      const result = normalizePath(resolveWorktreeRoot(worktreeDir));
       assert.strictEqual(result, worktreeDir,
         'linked worktree with .planning/ should resolve to itself, not the main repo');
     } finally {
@@ -1081,7 +1086,7 @@ describe('resolveWorktreeRoot with linked worktree .planning/', () => {
   });
 
   test('returns main repo root when linked worktree has no .planning/', () => {
-    const mainDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-wt-main-')));
+    const mainDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-wt-main-')));
     let worktreeDir;
     try {
       // Set up main repo with a commit
@@ -1094,15 +1099,13 @@ describe('resolveWorktreeRoot with linked worktree .planning/', () => {
       execSync('git commit -m "initial"', { cwd: mainDir, stdio: 'pipe' });
 
       // Create a linked worktree (no .planning/)
-      worktreeDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-wt-linked-')));
+      worktreeDir = normalizePath(fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-wt-linked-')));
       fs.rmSync(worktreeDir, { recursive: true, force: true });
       execSync(`git worktree add "${worktreeDir}" -b test-linked-no-plan`, { cwd: mainDir, stdio: 'pipe' });
 
       // resolveWorktreeRoot should return the main repo root
-      // Normalize both paths with fs.realpathSync to handle Windows 8.3 short paths
-      // (e.g., RUNNER~1 vs runneradmin on CI)
-      const result = fs.realpathSync(resolveWorktreeRoot(worktreeDir));
-      const expected = fs.realpathSync(mainDir);
+      const result = normalizePath(resolveWorktreeRoot(worktreeDir));
+      const expected = normalizePath(mainDir);
       assert.strictEqual(result, expected,
         'linked worktree without .planning/ should resolve to main repo root');
     } finally {
