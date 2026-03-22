@@ -408,12 +408,11 @@ describe('path traversal rejection', () => {
     for (const name of maliciousNames) {
       test(`rejects set ${name}`, () => {
         const result = runGsdTools(['workstream', 'set', name, '--raw'], tmpDir);
-        // set validates independently — should return error or invalid_name
-        assert.ok(result.success || !result.success, 'should handle gracefully');
-        if (result.success) {
-          const data = JSON.parse(result.output);
-          assert.strictEqual(data.error, 'invalid_name', `should return invalid_name error for: ${name}`);
-        }
+        // cmdWorkstreamSet validates the positional arg and returns invalid_name error
+        assert.ok(result.success, `command should exit cleanly for: ${name}`);
+        const data = JSON.parse(result.output);
+        assert.strictEqual(data.error, 'invalid_name', `should return invalid_name error for: ${name}`);
+        assert.strictEqual(data.active, null, `active should be null for: ${name}`);
       });
     }
   });
@@ -435,5 +434,18 @@ describe('path traversal rejection', () => {
     test('cleanup: remove active-workstream file', () => {
       try { fs.unlinkSync(path.join(tmpDir, '.planning', 'active-workstream')); } catch {}
     });
+  });
+
+  describe('setActiveWorkstream rejects invalid names directly', () => {
+    const { setActiveWorkstream } = require('../get-shit-done/bin/lib/core.cjs');
+    for (const name of maliciousNames) {
+      test(`throws for ${name}`, () => {
+        assert.throws(
+          () => setActiveWorkstream(tmpDir, name),
+          { message: /Invalid workstream name/ },
+          `should throw for: ${name}`
+        );
+      });
+    }
   });
 });

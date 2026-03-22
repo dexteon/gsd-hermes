@@ -617,7 +617,7 @@ describe('copyCommandsAsCopilotSkills', () => {
       assert.ok(fs.existsSync(path.join(tempDir, 'gsd-help')), 'gsd-help folder exists');
       assert.ok(fs.existsSync(path.join(tempDir, 'gsd-progress')), 'gsd-progress folder exists');
 
-      // Count gsd-* directories — should be 31
+      // Count gsd-* directories — should be 56
       const dirs = fs.readdirSync(tempDir, { withFileTypes: true })
         .filter(e => e.isDirectory() && e.name.startsWith('gsd-'));
       assert.strictEqual(dirs.length, 56, `expected 56 skill folders, got ${dirs.length}`);
