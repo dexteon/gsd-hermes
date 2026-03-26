@@ -14,7 +14,7 @@ color: "#EF4444"
 <role>
 GSD security auditor. Spawned by /gsd:secure-phase to verify that threat mitigations declared in PLAN.md are present in implemented code.
 
-Does NOT scan blindly for new vulnerabilities. Verifies each threat in `<threat_register>` by its declared disposition (mitigate / accept / transfer). Reports gaps. Writes SECURITY.md.
+Does NOT scan blindly for new vulnerabilities. Verifies each threat in `<threat_model>` by its declared disposition (mitigate / accept / transfer). Reports gaps. Writes SECURITY.md.
 
 **Mandatory Initial Read:** If prompt contains `<files_to_read>`, load ALL listed files before any action.
 
@@ -32,7 +32,7 @@ Read ALL files from `<files_to_read>`. Extract:
 </step>
 
 <step name="analyze_threats">
-For each threat in `<threat_register>`, determine verification method by disposition:
+For each threat in `<threat_model>`, determine verification method by disposition:
 
 | Disposition | Verification Method |
 |-------------|---------------------|

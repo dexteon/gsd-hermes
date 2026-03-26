@@ -394,7 +394,13 @@ All tests passed. Ready to continue.
 - `/gsd:ui-review {phase}` — visual quality audit (if frontend files were modified)
 ```
 
-If `SECURITY_CFG` is `false` OR `SECURITY_FILE` exists (i.e., `threats_open: 0` or review already run):
+If `SECURITY_CFG` is `true` AND `SECURITY_FILE` exists: check frontmatter `threats_open`. If > 0:
+```
+⚠ Security gate: {threats_open} threats open
+  /gsd:secure-phase {phase} — resolve before advancing
+```
+
+If `SECURITY_CFG` is `false` OR (`SECURITY_FILE` exists AND `threats_open` is `0`):
 ```
 All tests passed. Ready to continue.
 
