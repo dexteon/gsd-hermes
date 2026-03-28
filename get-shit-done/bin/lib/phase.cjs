@@ -689,10 +689,12 @@ function cmdPhaseComplete(cwd, phaseNum, raw) {
       const cells = fullRow.split('|').slice(1, -1);
       if (cells.length === 5) {
         // 5-col: Phase | Milestone | Plans | Status | Completed
+        cells[2] = ` ${summaryCount}/${planCount} `;
         cells[3] = ' Complete    ';
         cells[4] = ` ${today} `;
       } else if (cells.length === 4) {
         // 4-col: Phase | Plans | Status | Completed
+        cells[1] = ` ${summaryCount}/${planCount} `;
         cells[2] = ' Complete    ';
         cells[3] = ` ${today} `;
       }
@@ -708,6 +710,18 @@ function cmdPhaseComplete(cwd, phaseNum, raw) {
       roadmapContent, planCountPattern,
       `$1${summaryCount}/${planCount} plans complete`
     );
+
+    // Mark completed plan checkboxes (safety net for missed per-plan updates)
+    for (const summaryFile of phaseInfo.summaries) {
+      const planId = summaryFile.replace('-SUMMARY.md', '').replace('SUMMARY.md', '');
+      if (!planId) continue;
+      const planEscaped = escapeRegex(planId);
+      const planCheckboxPattern = new RegExp(
+        `(-\\s*\\[) (\\]\\s*${planEscaped})`,
+        'i'
+      );
+      roadmapContent = roadmapContent.replace(planCheckboxPattern, '$1x$2');
+    }
 
     fs.writeFileSync(roadmapPath, roadmapContent, 'utf-8');
 
