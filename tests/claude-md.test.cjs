@@ -106,7 +106,7 @@ describe('generate-claude-md skills section', () => {
     const content = fs.readFileSync(path.join(tmpDir, 'CLAUDE.md'), 'utf-8');
     assert.ok(content.includes('<!-- GSD:skills-start'));
     assert.ok(content.includes('<!-- GSD:skills-end -->'));
-    assert.ok(content.includes('No project skills found'));
+    assert.ok(content.includes('No project skills found. Add skills to any of'));
   });
 
   test('discovers skills from .claude/skills/ directory', () => {

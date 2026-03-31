@@ -79,7 +79,7 @@ Architecture not yet mapped. Follow existing patterns found in the codebase.
 
 **Fallback text:**
 ```
-No project skills found. Add skills to `.claude/skills/` or `.agents/skills/` with a `SKILL.md` index file.
+No project skills found. Add skills to any of: `.claude/skills/`, `.agents/skills/`, `.cursor/skills/`, or `.github/skills/` with a `SKILL.md` index file.
 ```
 
 **Discovery behavior:**
