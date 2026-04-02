@@ -5,11 +5,11 @@
  * top-level string form: "permission": "allow".
  */
 
-const { test, describe, afterEach } = require('node:test');
-const assert = require('node:assert');
+const { test, describe, beforeEach, afterEach } = require('node:test');
+const assert = require('node:assert/strict');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
+const { createTempDir, cleanup } = require('./helpers.cjs');
 
 process.env.GSD_TEST_MODE = '1';
 const { configureOpencodePermissions } = require('../bin/install.js');
@@ -27,17 +27,19 @@ function restoreEnv(snapshot) {
   }
 }
 
-function createOpencodeConfigDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-opencode-'));
-}
+let configDir;
+
+beforeEach(() => {
+  configDir = createTempDir('gsd-opencode-');
+});
 
 afterEach(() => {
+  cleanup(configDir);
   restoreEnv(originalEnv);
 });
 
 describe('configureOpencodePermissions', () => {
   test('does not crash or rewrite top-level string permissions', () => {
-    const configDir = createOpencodeConfigDir();
     const configPath = path.join(configDir, 'opencode.json');
     const original = JSON.stringify({
       $schema: 'https://opencode.ai/config.json',
@@ -50,12 +52,9 @@ describe('configureOpencodePermissions', () => {
 
     assert.doesNotThrow(() => configureOpencodePermissions(true));
     assert.strictEqual(fs.readFileSync(configPath, 'utf8'), original);
-
-    fs.rmSync(configDir, { recursive: true, force: true });
   });
 
   test('adds path-specific read and external_directory permissions for object configs', () => {
-    const configDir = createOpencodeConfigDir();
     const configPath = path.join(configDir, 'opencode.json');
     fs.writeFileSync(configPath, JSON.stringify({ permission: {} }, null, 2) + '\n');
     process.env.OPENCODE_CONFIG_DIR = configDir;
@@ -66,7 +65,5 @@ describe('configureOpencodePermissions', () => {
     const gsdPath = `${configDir.replace(/\\/g, '/')}/get-shit-done/*`;
     assert.strictEqual(config.permission.read[gsdPath], 'allow');
     assert.strictEqual(config.permission.external_directory[gsdPath], 'allow');
-
-    fs.rmSync(configDir, { recursive: true, force: true });
   });
 });
