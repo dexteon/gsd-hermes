@@ -158,13 +158,16 @@ Use `--sdk` to also install the GSD SDK CLI (`gsd-sdk`) for headless autonomous 
 <details>
 <summary><strong>Development Installation</strong></summary>
 
-Clone the repository and run the installer locally:
+Clone the repository, build hooks, and run the installer locally:
 
 ```bash
 git clone https://github.com/gsd-build/get-shit-done.git
 cd get-shit-done
+npm run build:hooks
 node bin/install.js --claude --local
 ```
+
+The `build:hooks` step is required — it compiles hook sources into `hooks/dist/` which the installer copies from. Without it, hooks won't be installed and you'll get hook errors in Claude Code. (The npm release handles this automatically via `prepublishOnly`.)
 
 Installs to `./.claude/` for testing modifications before contributing.
 
