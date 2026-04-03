@@ -413,4 +413,70 @@ describe('init manager', () => {
     // macOS resolves /var → /private/var; normalize both sides
     assert.strictEqual(fs.realpathSync(output.project_root), fs.realpathSync(tmpDir));
   });
+
+  test('output includes manager_flags defaults when not configured', () => {
+    writeState(tmpDir);
+    writeRoadmap(tmpDir, [{ number: '1', name: 'Test' }]);
+
+    const result = runGsdTools('init manager', tmpDir);
+    const output = JSON.parse(result.output);
+
+    assert.ok(output.manager_flags, 'should include manager_flags');
+    assert.strictEqual(output.manager_flags.discuss, '');
+    assert.strictEqual(output.manager_flags.plan, '');
+    assert.strictEqual(output.manager_flags.execute, '');
+  });
+
+  test('output includes manager_flags from config when set', () => {
+    writeState(tmpDir);
+    writeRoadmap(tmpDir, [{ number: '1', name: 'Test' }]);
+
+    // Write config with manager flags
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'config.json'),
+      JSON.stringify({
+        manager: {
+          flags: {
+            discuss: '--auto --analyze',
+            plan: '--skip-research',
+            execute: '--interactive',
+          }
+        }
+      })
+    );
+
+    const result = runGsdTools('init manager', tmpDir);
+    const output = JSON.parse(result.output);
+
+    assert.ok(output.manager_flags, 'should include manager_flags');
+    assert.strictEqual(output.manager_flags.discuss, '--auto --analyze');
+    assert.strictEqual(output.manager_flags.plan, '--skip-research');
+    assert.strictEqual(output.manager_flags.execute, '--interactive');
+  });
+
+  test('sanitizes invalid manager_flags to prevent injection (#1410)', () => {
+    writeState(tmpDir);
+    writeRoadmap(tmpDir, [{ number: '1', name: 'Test' }]);
+
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'config.json'),
+      JSON.stringify({
+        manager: {
+          flags: {
+            discuss: '; rm -rf /',
+            plan: '--valid-flag',
+            execute: '$(whoami)',
+          }
+        }
+      })
+    );
+
+    const result = runGsdTools('init manager', tmpDir);
+    const output = JSON.parse(result.output);
+
+    // Invalid flags should be sanitized to empty string
+    assert.strictEqual(output.manager_flags.discuss, '', 'injection attempt should be sanitized');
+    assert.strictEqual(output.manager_flags.plan, '--valid-flag', 'valid flag should pass through');
+    assert.strictEqual(output.manager_flags.execute, '', 'command substitution should be sanitized');
+  });
 });
