@@ -166,6 +166,7 @@ GSD uses a multi-agent architecture where thin orchestrators (workflow files) sp
 - Uses XML structure with `<task>` elements
 - Includes `read_first` and `acceptance_criteria` sections
 - Groups plans into dependency waves
+- Performs reachability check to validate plan steps reference accessible files and APIs (v1.32)
 
 ---
 
@@ -285,6 +286,7 @@ GSD uses a multi-agent architecture where thin orchestrators (workflow files) sp
 - Checks codebase against phase goals, not just task completion
 - PASS/FAIL with specific evidence
 - Logs issues for `/gsd-verify-work` to address
+- Milestone scope filtering: gaps addressed in later phases are marked as "deferred", not reported as failures (v1.32)
 
 ---
 

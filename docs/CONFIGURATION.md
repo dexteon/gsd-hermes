@@ -72,7 +72,8 @@ GSD stores project settings in `.planning/config.json`. Created during `/gsd-new
   "security_enforcement": true,
   "security_asvs_level": 1,
   "security_block_on": "high",
-  "agent_skills": {}
+  "agent_skills": {},
+  "response_language": null
 }
 ```
 
@@ -86,6 +87,7 @@ GSD stores project settings in `.planning/config.json`. Created during `/gsd-new
 | `granularity` | enum | `coarse`, `standard`, `fine` | `standard` | Controls phase count: `coarse` (3-5), `standard` (5-8), `fine` (8-12) |
 | `model_profile` | enum | `quality`, `balanced`, `budget`, `inherit` | `balanced` | Model tier for each agent (see [Model Profiles](#model-profiles)) |
 | `project_code` | string | any short string | (none) | Prefix for phase directory names (e.g., `"ABC"` produces `ABC-01-setup/`). Added in v1.31 |
+| `response_language` | string | language code | (none) | Language for agent responses (e.g., `"pt"`, `"ko"`, `"ja"`). Propagates to all spawned agents for cross-phase language consistency. Added in v1.32 |
 
 > **Note:** `granularity` was renamed from `depth` in v1.22.3. Existing configs are auto-migrated.
 
@@ -417,6 +419,7 @@ The intent is the same as the Claude profile tiers -- use a stronger model for p
 | `GEMINI_API_KEY` | Detected by context monitor to switch hook event name |
 | `WSL_DISTRO_NAME` | Detected by installer for WSL path handling |
 | `GSD_SKIP_SCHEMA_CHECK` | Skip schema drift detection during execute-phase (v1.31) |
+| `GSD_PROJECT` | Override project root for multi-project workspace support (v1.32) |
 
 ---
 

@@ -21,7 +21,7 @@
 
 ## System Overview
 
-GSD is a **meta-prompting framework** that sits between the user and AI coding agents (Claude Code, Gemini CLI, OpenCode, Kilo, Codex, Copilot, Antigravity). It provides:
+GSD is a **meta-prompting framework** that sits between the user and AI coding agents (Claude Code, Gemini CLI, OpenCode, Kilo, Codex, Copilot, Antigravity, Trae, Cline, Augment Code). It provides:
 
 1. **Context engineering** — Structured artifacts that give the AI everything it needs per task
 2. **Multi-agent orchestration** — Thin orchestrators that spawn specialized agents with fresh context windows
@@ -171,6 +171,8 @@ Runtime hooks that integrate with the host AI agent:
 | `gsd-check-update.js` | `SessionStart` | Background check for new GSD versions |
 | `gsd-prompt-guard.js` | `PreToolUse` | Scans `.planning/` writes for prompt injection patterns (advisory) |
 | `gsd-workflow-guard.js` | `PreToolUse` | Detects file edits outside GSD workflow context (advisory, opt-in via `hooks.workflow_guard`) |
+| `gsd-read-before-edit.js` | `PreToolUse` | Advisory guard preventing Edit/Write on files not yet read in the session (v1.32) |
+| `gsd-commit-docs.js` | `PreToolUse` | Guard for `commit_docs` enforcement (v1.32) |
 
 ### CLI Tools (`get-shit-done/bin/`)
 
@@ -302,12 +304,16 @@ ui-phase → UI-SPEC.md (design contract, optional)
     │
     ▼
 plan-phase
+    ├── Research gate (blocks if RESEARCH.md has unresolved open questions)
     ├── Phase Researcher → RESEARCH.md
-    ├── Planner → PLAN.md files
+    ├── Planner (with reachability check) → PLAN.md files
     └── Plan Checker → Verify loop (max 3x)
     │
     ▼
-execute-phase
+state planned-phase → STATE.md (Planned/Ready to execute)
+    │
+    ▼
+execute-phase (context reduction: truncated prompts, cache-friendly ordering)
     ├── Wave analysis (dependency grouping)
     ├── Executor per plan → code + atomic commits
     ├── SUMMARY.md per plan
@@ -426,7 +432,7 @@ Equivalent paths for other runtimes:
 
 The installer (`bin/install.js`, ~3,000 lines) handles:
 
-1. **Runtime detection** — Interactive prompt or CLI flags (`--claude`, `--opencode`, `--gemini`, `--kilo`, `--codex`, `--copilot`, `--antigravity`, `--cursor`, `--windsurf`, `--trae`, `--all`)
+1. **Runtime detection** — Interactive prompt or CLI flags (`--claude`, `--opencode`, `--gemini`, `--kilo`, `--codex`, `--copilot`, `--antigravity`, `--cursor`, `--windsurf`, `--trae`, `--cline`, `--augment`, `--all`)
 2. **Location selection** — Global (`--global`) or local (`--local`)
 3. **File deployment** — Copies commands, workflows, references, templates, agents, hooks
 4. **Runtime adaptation** — Transforms file content per runtime:
@@ -438,6 +444,8 @@ The installer (`bin/install.js`, ~3,000 lines) handles:
    - Gemini: Adjusts hook event names (`AfterTool` instead of `PostToolUse`)
    - Antigravity: Skills-first with Google model equivalents
    - Trae: Skills-first install to `~/.trae` / `./.trae` with no `settings.json` or hook integration
+   - Cline: Writes `.clinerules` for rule-based integration
+   - Augment Code: Skills-first with full skill conversion and config management
 5. **Path normalization** — Replaces `~/.claude/` paths with runtime-specific paths
 6. **Settings integration** — Registers hooks in runtime's `settings.json`
 7. **Patch backup** — Since v1.17, backs up locally modified files to `gsd-local-patches/` for `/gsd-reapply-patches`
@@ -519,6 +527,9 @@ GSD supports multiple AI coding runtimes through a unified command/workflow arch
 | Codex | `$gsd-command` | Skills | `~/.codex/` |
 | Copilot | `/gsd-command` | Agent delegation | `~/.github/` |
 | Antigravity | Skills | Skills | `~/.gemini/antigravity/` |
+| Trae | Skills | Skills | `~/.trae/` |
+| Cline | Rules | Rules | `.clinerules` |
+| Augment Code | Skills | Skills | Augment config |
 
 ### Abstraction Points
 
