@@ -1,18 +1,10 @@
-> [!WARNING]
-> **WORKAROUND FOR MISSING NPM UNTIL WE CAN PUBLISH AGAIN**
-> `npx get-shit-done-cc@latest` is currently unavailable. Install or update directly from source:
-> ```bash
-> git pull --rebase origin main && node scripts/build-hooks.js && node bin/install.js --claude --global
-> ```
-> See **[docs/manual-update.md](docs/manual-update.md)** for full instructions and all runtime flags.
-
 <div align="center">
 
 # GET SHIT DONE
 
 **English** · [Português](README.pt-BR.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja-JP.md) · [한국어](README.ko-KR.md)
 
-**A light-weight and powerful meta-prompting, context engineering and spec-driven development system for Claude Code, OpenCode, Gemini CLI, Kilo, Codex, Copilot, Cursor, Windsurf, Antigravity, and Augment.**
+**A light-weight and powerful meta-prompting, context engineering and spec-driven development system for Claude Code, OpenCode, Gemini CLI, Kilo, Codex, Copilot, Cursor, Windsurf, Antigravity, Augment, Trae, and Cline.**
 
 **Solves context rot — the quality degradation that happens as Claude fills its context window.**
 
@@ -83,6 +75,16 @@ People who want to describe what they want and have it built correctly — witho
 
 Built-in quality gates catch real problems: schema drift detection flags ORM changes missing migrations, security enforcement anchors verification to threat models, and scope reduction detection prevents the planner from silently dropping your requirements.
 
+### v1.32.0 Highlights
+
+- **STATE.md consistency gates** — `state validate` detects drift between STATE.md and filesystem; `state sync` reconstructs from actual project state
+- **`--to N` flag** — Stop autonomous execution after a specific phase
+- **Research gate** — Blocks planning when RESEARCH.md has unresolved open questions
+- **Verifier milestone scope filtering** — Gaps addressed in later phases marked as deferred, not gaps
+- **Read-before-edit guard** — Advisory hook prevents infinite retry loops in non-Claude runtimes
+- **Context reduction** — Markdown truncation and cache-friendly prompt ordering for lower token usage
+- **4 new runtimes** — Trae, Kilo, Augment, and Cline (12 runtimes total)
+
 ---
 
 ## Getting Started
@@ -92,16 +94,20 @@ npx get-shit-done-cc@latest
 ```
 
 The installer prompts you to choose:
-1. **Runtime** — Claude Code, OpenCode, Gemini, Kilo, Codex, Copilot, Cursor, Windsurf, Antigravity, Augment, Trae, or all (interactive multi-select — pick multiple runtimes in a single install session)
+1. **Runtime** — Claude Code, OpenCode, Gemini, Kilo, Codex, Copilot, Cursor, Windsurf, Antigravity, Augment, Trae, Cline, or all (interactive multi-select — pick multiple runtimes in a single install session)
 2. **Location** — Global (all projects) or local (current project only)
 
 Verify with:
 - Claude Code / Gemini / Copilot / Antigravity: `/gsd-help`
 - OpenCode / Kilo / Augment / Trae: `/gsd-help`
 - Codex: `$gsd-help`
+- Cline: GSD installs via `.clinerules` — verify by checking `.clinerules` exists
 
 > [!NOTE]
-> Claude Code 2.1.88+ and Codex install as skills (`skills/gsd-*/SKILL.md`). Older Claude Code versions use `commands/gsd/`. The installer handles this automatically.
+> Claude Code 2.1.88+ and Codex install as skills (`skills/gsd-*/SKILL.md`). Older Claude Code versions use `commands/gsd/`. Cline uses `.clinerules` for configuration. The installer handles all formats automatically.
+
+> [!TIP]
+> For source-based installs or environments where npm is unavailable, see **[docs/manual-update.md](docs/manual-update.md)**.
 
 ### Staying Updated
 
@@ -157,12 +163,16 @@ npx get-shit-done-cc --augment --local      # Install to ./.augment/
 npx get-shit-done-cc --trae --global        # Install to ~/.trae/
 npx get-shit-done-cc --trae --local         # Install to ./.trae/
 
+# Cline (uses .clinerules)
+npx get-shit-done-cc --cline --global       # Install to ~/.cline/
+npx get-shit-done-cc --cline --local        # Install to ./.clinerules
+
 # All runtimes
 npx get-shit-done-cc --all --global      # Install to all directories
 ```
 
 Use `--global` (`-g`) or `--local` (`-l`) to skip the location prompt.
-Use `--claude`, `--opencode`, `--gemini`, `--kilo`, `--codex`, `--copilot`, `--cursor`, `--windsurf`, `--antigravity`, `--augment`, `--trae`, or `--all` to skip the runtime prompt.
+Use `--claude`, `--opencode`, `--gemini`, `--kilo`, `--codex`, `--copilot`, `--cursor`, `--windsurf`, `--antigravity`, `--augment`, `--trae`, `--cline`, or `--all` to skip the runtime prompt.
 Use `--sdk` to also install the GSD SDK CLI (`gsd-sdk`) for headless autonomous execution.
 
 </details>
@@ -823,6 +833,8 @@ npx get-shit-done-cc --cursor --global --uninstall
 npx get-shit-done-cc --windsurf --global --uninstall
 npx get-shit-done-cc --antigravity --global --uninstall
 npx get-shit-done-cc --augment --global --uninstall
+npx get-shit-done-cc --trae --global --uninstall
+npx get-shit-done-cc --cline --global --uninstall
 
 # Local installs (current project)
 npx get-shit-done-cc --claude --local --uninstall
@@ -835,6 +847,8 @@ npx get-shit-done-cc --cursor --local --uninstall
 npx get-shit-done-cc --windsurf --local --uninstall
 npx get-shit-done-cc --antigravity --local --uninstall
 npx get-shit-done-cc --augment --local --uninstall
+npx get-shit-done-cc --trae --local --uninstall
+npx get-shit-done-cc --cline --local --uninstall
 ```
 
 This removes all GSD commands, agents, hooks, and settings while preserving your other configurations.

@@ -4,7 +4,7 @@
 
 [English](README.md) · **Português** · [简体中文](README.zh-CN.md) · [日本語](README.ja-JP.md)
 
-**Um sistema leve e poderoso de meta-prompting, engenharia de contexto e desenvolvimento orientado a especificação para Claude Code, OpenCode, Gemini CLI, Kilo, Codex, Copilot, Cursor, Windsurf, Antigravity, Augment e Trae.**
+**Um sistema leve e poderoso de meta-prompting, engenharia de contexto e desenvolvimento orientado a especificação para Claude Code, OpenCode, Gemini CLI, Kilo, Codex, Copilot, Cursor, Windsurf, Antigravity, Augment, Trae e Cline.**
 
 **Resolve context rot — a degradação de qualidade que acontece conforme o Claude enche a janela de contexto.**
 
@@ -73,6 +73,16 @@ Para quem quer descrever o que precisa e receber isso construído do jeito certo
 
 Quality gates embutidos capturam problemas reais: detecção de schema drift sinaliza mudanças ORM sem migrations, segurança ancora verificação a modelos de ameaça, e detecção de redução de escopo impede o planner de descartar requisitos silenciosamente.
 
+### Destaques v1.32.0
+
+- **Gates de consistência STATE.md** — `state validate` detecta divergência entre STATE.md e o filesystem; `state sync` reconstrói a partir do estado real do projeto
+- **Flag `--to N`** — Para a execução autônoma após completar uma fase específica
+- **Research gate** — Bloqueia planejamento quando RESEARCH.md tem perguntas abertas não resolvidas
+- **Filtro de escopo do verificador** — Lacunas abordadas em fases posteriores são marcadas como "adiadas", não como lacunas
+- **Guard de leitura antes de edição** — Hook consultivo previne loops de retry infinitos em runtimes não-Claude
+- **Redução de contexto** — Truncamento de Markdown e ordenação de prompts cache-friendly para menor uso de tokens
+- **4 novos runtimes** — Trae, Kilo, Augment e Cline (12 runtimes no total)
+
 ---
 
 ## Primeiros passos
@@ -82,20 +92,20 @@ npx get-shit-done-cc@latest
 ```
 
 O instalador pede:
-1. **Runtime** — Claude Code, OpenCode, Gemini, Kilo, Codex, Copilot, Cursor, Windsurf, Antigravity, Trae, ou todos
+1. **Runtime** — Claude Code, OpenCode, Gemini, Kilo, Codex, Copilot, Cursor, Windsurf, Antigravity, Augment, Trae, Cline, ou todos
 2. **Local** — Global (todos os projetos) ou local (apenas projeto atual)
 
 Verifique com:
-- Claude Code / Gemini: `/gsd-help`
-- OpenCode: `/gsd-help`
-- Kilo: `/gsd-help`
+- Claude Code / Gemini / Copilot / Antigravity: `/gsd-help`
+- OpenCode / Kilo / Augment / Trae: `/gsd-help`
 - Codex: `$gsd-help`
-- Copilot: `/gsd-help`
-- Antigravity: `/gsd-help`
-- Trae: `/gsd-help`
+- Cline: GSD instala via `.clinerules` — verifique se `.clinerules` existe
 
 > [!NOTE]
-> A instalação do Codex usa skills (`skills/gsd-*/SKILL.md`) em vez de prompts customizados.
+> Claude Code 2.1.88+ e Codex instalam como skills (`skills/gsd-*/SKILL.md`). Cline usa `.clinerules`. O instalador lida com todos os formatos automaticamente.
+
+> [!TIP]
+> Para instalação a partir do código-fonte ou ambientes sem npm, consulte **[docs/manual-update.md](docs/manual-update.md)**.
 
 ### Mantendo atualizado
 
@@ -137,16 +147,24 @@ npx get-shit-done-cc --cursor --local
 npx get-shit-done-cc --antigravity --global
 npx get-shit-done-cc --antigravity --local
 
+# Augment
+npx get-shit-done-cc --augment --global     # Install to ~/.augment/
+npx get-shit-done-cc --augment --local      # Install to ./.augment/
+
 # Trae (ByteDance, skills-first)
 npx get-shit-done-cc --trae --global        # Install to ~/.trae/
 npx get-shit-done-cc --trae --local         # Install to ./.trae/
+
+# Cline (usa .clinerules)
+npx get-shit-done-cc --cline --global       # Install to ~/.cline/
+npx get-shit-done-cc --cline --local        # Install to ./.clinerules
 
 # Todos
 npx get-shit-done-cc --all --global
 ```
 
 Use `--global` (`-g`) ou `--local` (`-l`) para pular a pergunta de local.
-Use `--claude`, `--opencode`, `--gemini`, `--kilo`, `--codex`, `--copilot`, `--cursor`, `--windsurf`, `--antigravity`, `--trae` ou `--all` para pular a pergunta de runtime.
+Use `--claude`, `--opencode`, `--gemini`, `--kilo`, `--codex`, `--copilot`, `--cursor`, `--windsurf`, `--antigravity`, `--augment`, `--trae`, `--cline` ou `--all` para pular a pergunta de runtime.
 
 </details>
 
@@ -416,7 +434,9 @@ npx get-shit-done-cc --codex --global --uninstall
 npx get-shit-done-cc --copilot --global --uninstall
 npx get-shit-done-cc --cursor --global --uninstall
 npx get-shit-done-cc --antigravity --global --uninstall
+npx get-shit-done-cc --augment --global --uninstall
 npx get-shit-done-cc --trae --global --uninstall
+npx get-shit-done-cc --cline --global --uninstall
 
 # Instalações locais (projeto atual)
 npx get-shit-done-cc --claude --local --uninstall
@@ -427,7 +447,9 @@ npx get-shit-done-cc --codex --local --uninstall
 npx get-shit-done-cc --copilot --local --uninstall
 npx get-shit-done-cc --cursor --local --uninstall
 npx get-shit-done-cc --antigravity --local --uninstall
+npx get-shit-done-cc --augment --local --uninstall
 npx get-shit-done-cc --trae --local --uninstall
+npx get-shit-done-cc --cline --local --uninstall
 ```
 
 ---
