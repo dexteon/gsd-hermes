@@ -128,6 +128,21 @@ process.stdin.on('end', () => {
     // Detect if GSD is active (has .planning/STATE.md in working directory)
     const isGsdActive = fs.existsSync(path.join(cwd, '.planning', 'STATE.md'));
 
+    // On CRITICAL with active GSD project, auto-record session state as a
+    // breadcrumb for /gsd-resume-work (#1974). Fire-and-forget subprocess —
+    // doesn't block the hook or the agent.
+    if (isCritical && isGsdActive) {
+      try {
+        const gsdTools = path.join(process.env.HOME || '', '.claude', 'get-shit-done', 'bin', 'gsd-tools.cjs');
+        const timestamp = new Date().toISOString().split('T')[0];
+        require('child_process').spawn(
+          process.execPath,
+          [gsdTools, 'state', 'update', 'Stopped At', `context exhaustion at ${usedPct}% (${timestamp})`],
+          { cwd, detached: true, stdio: 'ignore' }
+        ).unref();
+      } catch { /* non-critical — don't let state recording break the hook */ }
+    }
+
     // Build advisory warning message (never use imperative commands that
     // override user preferences — see #884)
     let message;
