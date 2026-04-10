@@ -366,11 +366,16 @@ Execute each selected wave in sequence. Within a wave: parallel if `PARALLELIZAT
        </worktree_branch_check>
 
        <parallel_execution>
-       You are running as a PARALLEL executor agent. Use --no-verify on all git
-       commits to avoid pre-commit hook contention with other agents. The
-       orchestrator validates hooks once after all agents complete.
+       You are running as a PARALLEL executor agent in a git worktree.
+       Use --no-verify on all git commits to avoid pre-commit hook contention
+       with other agents. The orchestrator validates hooks once after all agents complete.
        For gsd-tools commits: add --no-verify flag.
        For direct git commits: use git commit --no-verify -m "..."
+
+       IMPORTANT: Do NOT modify STATE.md or ROADMAP.md. execute-plan.md
+       auto-detects worktree mode (`.git` is a file, not a directory) and skips
+       shared file updates automatically. The orchestrator updates them centrally
+       after merge.
        </parallel_execution>
 
        <execution_context>
@@ -408,6 +413,7 @@ Execute each selected wave in sequence. Within a wave: parallel if `PARALLELIZAT
        - [ ] All tasks executed
        - [ ] Each task committed individually
        - [ ] SUMMARY.md created in plan directory
+       - [ ] No modifications to shared orchestrator artifacts (the orchestrator handles all post-wave shared-file writes)
        </success_criteria>
      "
    )
@@ -548,21 +554,112 @@ Execute each selected wave in sequence. Within a wave: parallel if `PARALLELIZAT
 
    **If no worktrees found:** Skip silently — agents may have been spawned without worktree isolation.
 
-5.6. **Post-wave shared artifact update (worktree mode only):**
+5.6. **Post-merge test gate (parallel mode only):**
 
-   When executor agents ran with `isolation="worktree"`, they skipped STATE.md and ROADMAP.md updates to avoid last-merge-wins overwrites. The orchestrator is the single writer for these files. After worktrees are merged back, update shared artifacts once:
+   After merging all worktrees in a wave, run the project's test suite to catch
+   cross-plan integration issues that individual worktree self-checks cannot detect
+   (e.g., conflicting type definitions, removed exports, import changes).
+
+   This addresses the Generator self-evaluation blind spot identified in Anthropic's
+   harness engineering research: agents reliably report Self-Check: PASSED even when
+   merging their work creates failures.
 
    ```bash
-   # Update ROADMAP.md for each completed plan in this wave
-   for PLAN_ID in ${WAVE_PLAN_IDS}; do
-     node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap update-plan-progress "${PHASE_NUMBER}" "${PLAN_ID}" completed
-   done
+   # Detect test runner and run quick smoke test (timeout: 5 minutes)
+   TEST_EXIT=0
+   timeout 300 bash -c '
+   if [ -f "package.json" ]; then
+     npm test 2>&1
+   elif [ -f "Cargo.toml" ]; then
+     cargo test 2>&1
+   elif [ -f "go.mod" ]; then
+     go test ./... 2>&1
+   elif [ -f "pyproject.toml" ] || [ -f "requirements.txt" ]; then
+     python -m pytest -x -q --tb=short 2>&1 || uv run python -m pytest -x -q --tb=short 2>&1
+   else
+     echo "⚠ No test runner detected — skipping post-merge test gate"
+     exit 0
+   fi
+   '
+   TEST_EXIT=$?
+   if [ "${TEST_EXIT}" -eq 0 ]; then
+     echo "✓ Post-merge test gate passed — no cross-plan conflicts"
+   elif [ "${TEST_EXIT}" -eq 124 ]; then
+     echo "⚠ Post-merge test gate timed out after 5 minutes"
+   else
+     echo "✗ Post-merge test gate failed (exit code ${TEST_EXIT})"
+     WAVE_FAILURE_COUNT=$((WAVE_FAILURE_COUNT + 1))
+   fi
+   ```
 
+   **If `TEST_EXIT` is 0 (pass):** `✓ Post-merge test gate: {N} tests passed — no cross-plan conflicts` → continue to orchestrator tracking update.
+
+   **If `TEST_EXIT` is 124 (timeout):** Log warning, treat as non-blocking, continue. Tests may need a longer budget or manual run.
+
+   **If `TEST_EXIT` is non-zero (test failure):** Increment `WAVE_FAILURE_COUNT` to track
+   cumulative failures across waves. Subsequent waves should report:
+   `⚠ Note: ${WAVE_FAILURE_COUNT} prior wave(s) had test failures`
+
+5.7. **Post-wave shared artifact update (worktree mode only, skip if tests failed):**
+
+   When executor agents ran with `isolation="worktree"`, they skipped STATE.md and ROADMAP.md updates to avoid last-merge-wins overwrites. The orchestrator is the single writer for these files. After worktrees are merged back, update shared artifacts once.
+
+   **Only update tracking when tests passed (TEST_EXIT=0).**
+   If tests failed or timed out, skip the tracking update — plans should
+   not be marked as complete when integration tests are failing or inconclusive.
+
+   ```bash
+   # Guard: only update tracking if post-merge tests passed
+   # Timeout (124) is treated as inconclusive — do NOT mark plans complete
+   if [ "${TEST_EXIT}" -eq 0 ]; then
+     # Update ROADMAP plan progress for each completed plan in this wave
+     for plan_id in {completed_plan_ids}; do
+       node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap update-plan-progress "${PHASE_NUMBER}" "${plan_id}" "complete"
+     done
+
+     # Only commit tracking files if they actually changed
+     if ! git diff --quiet .planning/ROADMAP.md .planning/STATE.md 2>/dev/null; then
+       node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-${PHASE_NUMBER}): update tracking after wave ${N}" --files .planning/ROADMAP.md .planning/STATE.md
+     fi
+   elif [ "${TEST_EXIT}" -eq 124 ]; then
+     echo "⚠ Skipping tracking update — test suite timed out. Plans remain in-progress. Run tests manually to confirm."
+   else
+     echo "⚠ Skipping tracking update — post-merge tests failed (exit ${TEST_EXIT}). Plans remain in-progress until tests pass."
+   fi
    ```
 
    Where `WAVE_PLAN_IDS` is the space-separated list of plan IDs that completed in this wave.
 
    **If `workflow.use_worktrees` is `false`:** Sequential agents already updated STATE.md and ROADMAP.md themselves — skip this step.
+
+5.8. **Handle test gate failures (when `WAVE_FAILURE_COUNT > 0`):**
+
+   ```
+   ## ⚠ Post-Merge Test Failure (cumulative failures: ${WAVE_FAILURE_COUNT})
+
+   Wave {N} worktrees merged successfully, but {M} tests fail after merge.
+   This typically indicates conflicting changes across parallel plans
+   (e.g., type definitions, shared imports, API contracts).
+
+   Failed tests:
+   {first 10 lines of failure output}
+
+   Options:
+   1. Fix now (recommended) — resolve conflicts before next wave
+   2. Continue — failures may compound in subsequent waves
+   ```
+
+   Note: If `WAVE_FAILURE_COUNT > 1`, strongly recommend "Fix now" — compounding
+   failures across multiple waves become exponentially harder to diagnose.
+
+   If "Fix now": diagnose failures (typically import conflicts, missing types,
+   or changed function signatures from parallel plans modifying the same module).
+   Fix, commit as `fix: resolve post-merge conflicts from wave {N}`, re-run tests.
+
+   **Why this matters:** Worktree isolation means each agent's Self-Check passes
+   in isolation. But when merged, add/add conflicts in shared files (models, registries,
+   CLI entry points) can silently drop code. The post-merge gate catches this before
+   the next wave builds on a broken foundation.
 
 6. **Report completion — spot-check claims first:**
 
@@ -849,10 +946,11 @@ Collect all unique test file paths into `REGRESSION_FILES`.
 ```bash
 # Detect test runner and run prior phase tests
 if [ -f "package.json" ]; then
-  # Node.js — use project's test runner
-  npx jest ${REGRESSION_FILES} --passWithNoTests --no-coverage -q 2>&1 || npx vitest run ${REGRESSION_FILES} 2>&1
+  npm test 2>&1
 elif [ -f "Cargo.toml" ]; then
   cargo test 2>&1
+elif [ -f "go.mod" ]; then
+  go test ./... 2>&1
 elif [ -f "requirements.txt" ] || [ -f "pyproject.toml" ]; then
   python -m pytest ${REGRESSION_FILES} -q --tb=short 2>&1
 fi
