@@ -28,6 +28,7 @@ const VALID_CONFIG_KEYS = new Set([
   'git.branching_strategy', 'git.base_branch', 'git.phase_branch_template', 'git.milestone_branch_template', 'git.quick_branch_template',
   'planning.commit_docs', 'planning.search_gitignored',
   'workflow.subagent_timeout',
+  'workflow.inline_plan_threshold',
   'hooks.context_warnings',
   'features.thinking_partner',
   'context',
