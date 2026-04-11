@@ -25,6 +25,7 @@ const VALID_CONFIG_KEYS = new Set([
   'workflow.use_worktrees',
   'workflow.code_review',
   'workflow.code_review_depth',
+  'workflow.code_review_command',
   'git.branching_strategy', 'git.base_branch', 'git.phase_branch_template', 'git.milestone_branch_template', 'git.quick_branch_template',
   'planning.commit_docs', 'planning.search_gitignored',
   'workflow.subagent_timeout',
@@ -64,6 +65,7 @@ const CONFIG_KEY_SUGGESTIONS = {
   'hooks.research_questions': 'workflow.research_before_questions',
   'workflow.research_questions': 'workflow.research_before_questions',
   'workflow.codereview': 'workflow.code_review',
+  'workflow.review_command': 'workflow.code_review_command',
   'workflow.review': 'workflow.code_review',
   'workflow.code_review_level': 'workflow.code_review_depth',
   'workflow.review_depth': 'workflow.code_review_depth',
@@ -154,6 +156,7 @@ function buildNewProjectConfig(userChoices) {
       skip_discuss: false,
       code_review: true,
       code_review_depth: 'standard',
+      code_review_command: null,
     },
     hooks: {
       context_warnings: true,
