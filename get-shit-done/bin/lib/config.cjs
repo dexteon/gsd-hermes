@@ -33,6 +33,7 @@ const VALID_CONFIG_KEYS = new Set([
   'planning.commit_docs', 'planning.search_gitignored',
   'workflow.cross_ai_execution', 'workflow.cross_ai_command', 'workflow.cross_ai_timeout',
   'workflow.subagent_timeout',
+  'workflow.inline_plan_threshold',
   'hooks.context_warnings',
   'features.thinking_partner',
   'context',
