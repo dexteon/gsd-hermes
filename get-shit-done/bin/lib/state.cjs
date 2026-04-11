@@ -921,6 +921,10 @@ function releaseStateLock(lockPath) {
  * each other's changes (race condition with read-modify-write cycle).
  */
 function writeStateMd(statePath, content, cwd) {
+  // Invalidate disk scan cache before computing new frontmatter — the write
+  // may create new PLAN/SUMMARY files that buildStateFrontmatter must see.
+  // Safe for any calling pattern, not just short-lived CLI processes (#1967).
+  if (cwd) _diskScanCache.delete(cwd);
   const synced = syncStateFrontmatter(content, cwd);
   const lockPath = acquireStateLock(statePath);
   try {
