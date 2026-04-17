@@ -48,22 +48,43 @@ describe('#1656: community .sh hooks must be present in hooks/dist', () => {
 });
 
 // ─── #1657 ───────────────────────────────────────────────────────────────────
+//
+// Historical context: #1657 originally guarded against a broken `promptSdk()`
+// flow that shipped when `@gsd-build/sdk` did not yet exist on npm. The
+// package was published at v0.1.0 and is now a hard runtime requirement for
+// every /gsd-* command (they all shell out to `gsd-sdk query …`).
+//
+// #2385 restored the `--sdk` flag and made SDK install the default path in
+// bin/install.js. These guards are inverted: we now assert that SDK install
+// IS wired up, and that the old broken `promptSdk()` prompt is still gone.
 
-describe('#1657: SDK prompt must not appear in installer source', () => {
+describe('#1657 / #2385: SDK install must be wired into installer source', () => {
   let src;
-  test('install.js does not contain promptSdk call', () => {
+  test('install.js does not contain the legacy promptSdk() prompt (#1657)', () => {
     src = fs.readFileSync(INSTALL_SRC, 'utf-8');
     assert.ok(
       !src.includes('promptSdk('),
-      'promptSdk() must not be called — SDK prompt causes install failures when package does not exist on npm'
+      'promptSdk() must not be reintroduced — the old interactive prompt flow was broken'
     );
   });
 
-  test('install.js does not contain --sdk flag handling', () => {
+  test('install.js wires up --sdk / --no-sdk flag handling (#2385)', () => {
     src = src || fs.readFileSync(INSTALL_SRC, 'utf-8');
     assert.ok(
-      !src.includes("args.includes('--sdk')"),
-      '--sdk flag must be removed to prevent users triggering a broken SDK install'
+      src.includes("args.includes('--sdk')"),
+      '--sdk flag must be parsed so users can force SDK (re)install'
+    );
+    assert.ok(
+      src.includes("args.includes('--no-sdk')"),
+      '--no-sdk flag must be parsed so users can opt out of SDK install'
+    );
+  });
+
+  test('install.js installs @gsd-build/sdk by default (#2385)', () => {
+    src = src || fs.readFileSync(INSTALL_SRC, 'utf-8');
+    assert.ok(
+      src.includes('@gsd-build/sdk'),
+      'installer must reference @gsd-build/sdk so gsd-sdk lands on PATH'
     );
   });
 });
