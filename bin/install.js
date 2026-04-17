@@ -6659,12 +6659,30 @@ function installSdkIfNeeded() {
   console.log(`\n  ${cyan}Installing GSD SDK (@gsd-build/sdk)…${reset}`);
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   const result = spawnSync(npmCmd, ['install', '-g', '@gsd-build/sdk'], { stdio: 'inherit' });
-  if (result.status === 0) {
-    console.log(`  ${green}✓${reset} Installed @gsd-build/sdk (gsd-sdk now on PATH)`);
-  } else {
-    console.warn(`  ${yellow}⚠${reset}  Failed to install @gsd-build/sdk automatically.`);
+
+  const warnManual = (reason) => {
+    console.warn(`  ${yellow}⚠${reset}  ${reason}`);
     console.warn(`     Run manually: ${cyan}npm install -g @gsd-build/sdk${reset}`);
+    console.warn(`     Then restart your shell so the updated PATH is picked up.`);
     console.warn(`     Without it, /gsd-* commands will fail with "command not found: gsd-sdk".`);
+  };
+
+  if (result.status !== 0) {
+    warnManual('Failed to install @gsd-build/sdk automatically.');
+    return;
+  }
+
+  // Verify gsd-sdk is actually resolvable on PATH. npm's global bin dir is
+  // not always on the current shell's PATH (Homebrew prefixes, nvm setups,
+  // unconfigured npm prefix), so a zero exit status from `npm install -g`
+  // alone is not proof of a working binary.
+  const resolverCmd = process.platform === 'win32' ? 'where' : 'which';
+  const verify = spawnSync(resolverCmd, ['gsd-sdk'], { encoding: 'utf-8' });
+  if (verify.status === 0 && verify.stdout && verify.stdout.trim()) {
+    console.log(`  ${green}✓${reset} Installed @gsd-build/sdk (gsd-sdk resolved at ${verify.stdout.trim().split('\n')[0]})`);
+  } else {
+    warnManual('Installed @gsd-build/sdk but gsd-sdk is not on PATH — npm global bin may not be in your PATH.');
+    if (verify.stderr) console.warn(`     resolver stderr: ${verify.stderr.trim()}`);
   }
 }
 
