@@ -77,6 +77,8 @@ const hasBoth = args.includes('--both'); // Legacy flag, keeps working
 const hasAll = args.includes('--all');
 const hasUninstall = args.includes('--uninstall') || args.includes('-u');
 const hasPortableHooks = args.includes('--portable-hooks') || process.env.GSD_PORTABLE_HOOKS === '1';
+const hasSdk = args.includes('--sdk');
+const hasNoSdk = args.includes('--no-sdk');
 
 // Runtime selection - can be set by flags or interactive prompt
 let selectedRuntimes = [];
@@ -6627,6 +6629,41 @@ function promptLocation(runtimes) {
 }
 
 /**
+ * Ensure `@gsd-build/sdk` (the `gsd-sdk` binary) is installed globally so
+ * workflow commands that shell out to `gsd-sdk query …` succeed.
+ *
+ * Skip if --no-sdk. Skip if already on PATH (unless --sdk was explicit).
+ * Failures are warnings, not fatal.
+ */
+function installSdkIfNeeded() {
+  if (hasNoSdk) {
+    console.log(`\n  ${dim}Skipping GSD SDK install (--no-sdk)${reset}`);
+    return;
+  }
+
+  const { spawnSync } = require('child_process');
+
+  if (!hasSdk) {
+    const probe = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['gsd-sdk'], { stdio: 'ignore' });
+    if (probe.status === 0) {
+      console.log(`  ${green}✓${reset} GSD SDK already installed (gsd-sdk on PATH)`);
+      return;
+    }
+  }
+
+  console.log(`\n  ${cyan}Installing GSD SDK (@gsd-build/sdk)…${reset}`);
+  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const result = spawnSync(npmCmd, ['install', '-g', '@gsd-build/sdk'], { stdio: 'inherit' });
+  if (result.status === 0) {
+    console.log(`  ${green}✓${reset} Installed @gsd-build/sdk (gsd-sdk now on PATH)`);
+  } else {
+    console.warn(`  ${yellow}⚠${reset}  Failed to install @gsd-build/sdk automatically.`);
+    console.warn(`     Run manually: ${cyan}npm install -g @gsd-build/sdk${reset}`);
+    console.warn(`     Without it, /gsd-* commands will fail with "command not found: gsd-sdk".`);
+  }
+}
+
+/**
  * Install GSD for all selected runtimes
  */
 function installAllRuntimes(runtimes, isGlobal, isInteractive) {
@@ -6641,7 +6678,12 @@ function installAllRuntimes(runtimes, isGlobal, isInteractive) {
   const primaryStatuslineResult = results.find(r => statuslineRuntimes.includes(r.runtime));
 
   const finalize = (shouldInstallStatusline) => {
-    // Handle SDK installation before printing final summaries
+    // Install @gsd-build/sdk so `gsd-sdk` lands on PATH.
+    // Every /gsd-* command shells out to `gsd-sdk query …`; without this,
+    // commands fail with "command not found: gsd-sdk".
+    // Runs by default; skip with --no-sdk. Idempotent when already present.
+    installSdkIfNeeded();
+
     const printSummaries = () => {
       for (const result of results) {
         const useStatusline = statuslineRuntimes.includes(result.runtime) && shouldInstallStatusline;
