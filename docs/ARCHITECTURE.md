@@ -134,7 +134,7 @@ Specialized agent definitions with frontmatter specifying:
 - `tools` — Allowed tool access (Read, Write, Edit, Bash, Grep, Glob, WebSearch, etc.)
 - `color` — Terminal output color for visual distinction
 
-**Total agents:** 31
+**Total agents:** 33
 
 ### References (`get-shit-done/references/*.md`)
 
