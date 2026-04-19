@@ -1,7 +1,7 @@
 /**
  * Regression test for bug #2439
  *
- * /gsd:set-profile crashed with `command not found: gsd-sdk` when the
+ * /gsd-set-profile crashed with `command not found: gsd-sdk` when the
  * gsd-sdk binary was not installed or not in PATH. The command body
  * invoked `gsd-sdk query config-set-model-profile` directly with no
  * pre-flight check, so missing gsd-sdk produced an opaque shell error.
@@ -19,7 +19,7 @@ const path = require('path');
 
 const COMMAND_PATH = path.join(__dirname, '..', 'commands', 'gsd', 'set-profile.md');
 
-describe('bug #2439: /gsd:set-profile gsd-sdk pre-flight check', () => {
+describe('bug #2439: /gsd-set-profile gsd-sdk pre-flight check', () => {
   const content = fs.readFileSync(COMMAND_PATH, 'utf-8');
 
   test('command file exists', () => {
