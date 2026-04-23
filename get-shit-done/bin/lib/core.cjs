@@ -266,6 +266,7 @@ const CONFIG_DEFAULTS = {
   security_enforcement: true, // workflow.security_enforcement — threat-model-anchored security verification via /gsd:secure-phase
   security_asvs_level: 1, // workflow.security_asvs_level — OWASP ASVS verification level (1=opportunistic, 2=standard, 3=comprehensive)
   security_block_on: 'high', // workflow.security_block_on — minimum severity that blocks phase advancement ('high' | 'medium' | 'low')
+  post_planning_gaps: true, // workflow.post_planning_gaps — unified post-planning gap report (#2493): scan REQUIREMENTS.md + CONTEXT.md decisions vs all PLAN.md files
 };
 
 function loadConfig(cwd) {
@@ -381,6 +382,7 @@ function loadConfig(cwd) {
       plan_checker: get('plan_checker', { section: 'workflow', field: 'plan_check' }) ?? defaults.plan_checker,
       verifier: get('verifier', { section: 'workflow', field: 'verifier' }) ?? defaults.verifier,
       nyquist_validation: get('nyquist_validation', { section: 'workflow', field: 'nyquist_validation' }) ?? defaults.nyquist_validation,
+      post_planning_gaps: get('post_planning_gaps', { section: 'workflow', field: 'post_planning_gaps' }) ?? defaults.post_planning_gaps,
       parallelization,
       brave_search: get('brave_search') ?? defaults.brave_search,
       firecrawl: get('firecrawl') ?? defaults.firecrawl,
@@ -434,6 +436,9 @@ function loadConfig(cwd) {
         plan_checker: globalDefaults.plan_checker ?? defaults.plan_checker,
         verifier: globalDefaults.verifier ?? defaults.verifier,
         nyquist_validation: globalDefaults.nyquist_validation ?? defaults.nyquist_validation,
+        post_planning_gaps: globalDefaults.post_planning_gaps
+          ?? globalDefaults.workflow?.post_planning_gaps
+          ?? defaults.post_planning_gaps,
         parallelization: globalDefaults.parallelization ?? defaults.parallelization,
         text_mode: globalDefaults.text_mode ?? defaults.text_mode,
         resolve_model_ids: globalDefaults.resolve_model_ids ?? defaults.resolve_model_ids,
