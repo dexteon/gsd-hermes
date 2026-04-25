@@ -1989,8 +1989,8 @@ Use TypeScript.`, 'utf-8');
       );
       expect(discussCalls.length).toBeGreaterThanOrEqual(1);
       const prompt = discussCalls[0][0] as string;
-      expect(prompt).toContain('Self-Discuss Mode');
-      expect(prompt).toContain('No human is present');
+      expect(prompt).toContain('HEADLESS MODE');
+      expect(prompt).toContain('no human present');
     });
 
     it('skips self-discuss when context already exists even in auto-mode', async () => {

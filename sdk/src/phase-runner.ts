@@ -438,9 +438,34 @@ export class PhaseRunner {
       const contextFiles = await this.contextEngine.resolveContextFiles(PhaseType.Discuss);
       let prompt = await this.promptFactory.buildPrompt(PhaseType.Discuss, null, contextFiles);
 
-      // Supplement with self-discuss instructions with pass cap
+      // Prepend self-discuss override BEFORE the workflow prompt.
+      // The workflow prompt contains interactive patterns (user questions, area selection)
+      // that the agent will follow unless explicitly overridden up front.
       const maxPasses = this.config.workflow.max_discuss_passes ?? 3;
-      prompt += `\n\n## Self-Discuss Mode\n\nYou are the AI discussing decisions with yourself. No human is present. Identify 3-5 gray areas in the project scope, reason through each one, make opinionated choices, and write CONTEXT.md with your decisions.\n\n**CRITICAL: Single-pass only.** You MUST complete all decisions in ONE pass and write CONTEXT.md once. Do NOT re-read your own CONTEXT.md to find "gaps" and do additional passes. The maximum allowed passes is ${maxPasses} — if you have already written CONTEXT.md, you are DONE. Proceed to the next workflow step. Self-referential gap-finding loops waste resources without adding value.`;
+      const selfDiscussOverride = [
+        '## HEADLESS MODE — MANDATORY OVERRIDE',
+        '',
+        '**This session is running headless with no human present.**',
+        '',
+        'You MUST NOT:',
+        '- Use AskUserQuestion or any interactive tools',
+        '- Invoke Skill() or SlashCommand()',
+        '- Ask the user anything or wait for input',
+        '- Use multi-select, checkbox, or prompt UIs',
+        '',
+        'You MUST:',
+        '- Make all decisions autonomously and opinionatedly',
+        '- Identify 3-5 gray areas in the project scope',
+        '- Reason through each one yourself and pick the best option',
+        '- Write CONTEXT.md with your decisions in a single pass',
+        `- Complete within ${maxPasses} pass(es) maximum — do not re-read your own output to find gaps`,
+        '',
+        'Any instructions below about "asking the user", "discussing with the user", or "interactive" should be read as "decide yourself."',
+        '',
+        '---',
+        '',
+      ].join('\n');
+      prompt = selfDiscussOverride + prompt;
 
       planResult = await runPhaseStepSession(
         prompt,
