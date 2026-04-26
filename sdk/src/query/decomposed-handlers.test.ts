@@ -186,6 +186,15 @@ describe('progressBar', () => {
  * archive logic instead of delegating to phasesArchive.
  */
 describe('milestoneComplete', () => {
+  const assertMilestoneSuccess = (result: Awaited<ReturnType<typeof milestoneComplete>>, version: string) => {
+    const data = result.data as Record<string, unknown>;
+    expect(data.version).toBe(version);
+    expect(typeof data.date).toBe('string');
+    expect(typeof data.phases).toBe('number');
+    expect(data.milestones_updated).toBe(true);
+    return data;
+  };
+
   it('accepts version as first positional arg and returns it in data', async () => {
     const result = await milestoneComplete(['v1.19', '--name', 'Test Milestone'], tmpDir);
     const data = result.data as Record<string, unknown>;
@@ -202,13 +211,7 @@ describe('milestoneComplete', () => {
     // If the old bug were present, this would return { completed: false, reason: 'GSDError: version required for phases archive' }
     // The fix ensures version is extracted from args[0] before any archive operation
     const result = await milestoneComplete(['v1.0'], tmpDir);
-    const data = result.data as Record<string, unknown>;
-
-    // Should return the success shape with version, never the error shape
-    expect(data.version).toBe('v1.0');
-    expect(typeof data.date).toBe('string');
-    expect(typeof data.phases).toBe('number');
-    expect(data.milestones_updated).toBe(true);
+    assertMilestoneSuccess(result, 'v1.0');
   });
 
   it('throws GSDError when version arg is missing (not masked as completed: false)', async () => {
@@ -219,9 +222,8 @@ describe('milestoneComplete', () => {
 
   it('archives with --archive-phases when flag is present', async () => {
     const result = await milestoneComplete(['v1.0', '--archive-phases'], tmpDir);
-    const data = result.data as Record<string, unknown>;
+    const data = assertMilestoneSuccess(result, 'v1.0');
 
-    expect(data.version).toBe('v1.0');
     const archived = data.archived as Record<string, unknown>;
     // --archive-phases was passed; phases dir should have been scoped but
     // may result in 0 if the milestone filter finds no matching dirs.
@@ -231,9 +233,8 @@ describe('milestoneComplete', () => {
 
   it('returns name from --name flag', async () => {
     const result = await milestoneComplete(['v2.0', '--name', 'My Release'], tmpDir);
-    const data = result.data as Record<string, unknown>;
+    const data = assertMilestoneSuccess(result, 'v2.0');
 
-    expect(data.version).toBe('v2.0');
     expect(data.name).toBe('My Release');
   });
 });
