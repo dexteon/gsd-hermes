@@ -33,6 +33,8 @@ async function setupProject(opts: {
   const phasesDir = join(planningDir, 'phases');
   const phaseFullDir = join(phasesDir, opts.phaseDir);
 
+  const phaseNum = parseInt(opts.phaseDir, 10) || 1;
+
   await mkdir(phaseFullDir, { recursive: true });
   await writeFile(join(planningDir, 'ROADMAP.md'), opts.roadmap, 'utf-8');
   await writeFile(
@@ -46,7 +48,7 @@ async function setupProject(opts: {
       '',
       '# Project State',
       '',
-      'Phase: 7 of 2 — EXECUTING',
+      `Phase: ${phaseNum} of 2 — EXECUTING`,
     ].join('\n'),
     'utf-8',
   );
