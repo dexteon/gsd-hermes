@@ -98,24 +98,30 @@ describe('Hermes Agent local install/uninstall', () => {
     assert.strictEqual(result.runtime, 'hermes');
     assert.strictEqual(result.configDir, fs.realpathSync(targetDir));
 
-    assert.ok(fs.existsSync(path.join(targetDir, 'skills', 'gsd-help', 'SKILL.md')));
+    // Nested layout per spec #2841: all GSD skills collapse into a single
+    // skills/gsd/ category so Hermes' system prompt sees one entry, not 86.
+    assert.ok(fs.existsSync(path.join(targetDir, 'skills', 'gsd', 'gsd-help', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(targetDir, 'skills', 'gsd', 'DESCRIPTION.md')),
+      'DESCRIPTION.md exists at category root');
     assert.ok(fs.existsSync(path.join(targetDir, 'get-shit-done', 'VERSION')));
     assert.ok(fs.existsSync(path.join(targetDir, 'agents')));
 
     const manifest = writeManifest(targetDir, 'hermes');
-    assert.ok(Object.keys(manifest.files).some(file => file.startsWith('skills/gsd-help/')), manifest);
+    assert.ok(Object.keys(manifest.files).some(file => file.startsWith('skills/gsd/gsd-help/')), manifest);
 
     uninstall(false, 'hermes');
 
-    assert.ok(!fs.existsSync(path.join(targetDir, 'skills', 'gsd-help')), 'Hermes skill directory removed');
+    assert.ok(!fs.existsSync(path.join(targetDir, 'skills', 'gsd', 'gsd-help')), 'Hermes skill directory removed');
+    assert.ok(!fs.existsSync(path.join(targetDir, 'skills', 'gsd')), 'Hermes gsd category dir removed');
     assert.ok(!fs.existsSync(path.join(targetDir, 'get-shit-done')), 'get-shit-done removed');
   });
 
   test('installed SKILL.md frontmatter conforms to Hermes spec', () => {
     install(false, 'hermes');
     const targetDir = path.join(tmpDir, '.hermes');
-    const skillsDir = path.join(targetDir, 'skills');
-    const skillDirs = fs.readdirSync(skillsDir, { withFileTypes: true })
+    // Nested layout: skills live under skills/gsd/gsd-*/SKILL.md.
+    const categoryDir = path.join(targetDir, 'skills', 'gsd');
+    const skillDirs = fs.readdirSync(categoryDir, { withFileTypes: true })
       .filter(e => e.isDirectory() && e.name.startsWith('gsd-'))
       .map(e => e.name);
 
@@ -123,7 +129,7 @@ describe('Hermes Agent local install/uninstall', () => {
 
     // Parse every SKILL.md and assert structural shape required by Hermes.
     for (const dir of skillDirs) {
-      const content = fs.readFileSync(path.join(skillsDir, dir, 'SKILL.md'), 'utf8');
+      const content = fs.readFileSync(path.join(categoryDir, dir, 'SKILL.md'), 'utf8');
       const fm = parseFrontmatter(content);
       assert.strictEqual(fm.name, dir, `${dir}/SKILL.md name matches dir`);
       assert.ok(typeof fm.description === 'string' && fm.description.length > 0,
@@ -131,6 +137,15 @@ describe('Hermes Agent local install/uninstall', () => {
       assert.strictEqual(fm.version, pkg.version,
         `${dir}/SKILL.md declares version ${pkg.version} (got ${JSON.stringify(fm.version)})`);
     }
+
+    // The category DESCRIPTION.md is part of the spec — verify it parses too.
+    const desc = fs.readFileSync(path.join(categoryDir, 'DESCRIPTION.md'), 'utf8');
+    const descFm = parseFrontmatter(desc);
+    assert.strictEqual(descFm.name, 'gsd', 'category DESCRIPTION.md name is "gsd"');
+    assert.ok(typeof descFm.description === 'string' && descFm.description.length > 0,
+      'category DESCRIPTION.md has description');
+    assert.strictEqual(descFm.version, pkg.version,
+      'category DESCRIPTION.md declares version');
 
     uninstall(false, 'hermes');
   });
@@ -184,19 +199,21 @@ describe('E2E: Hermes Agent uninstall skills cleanup', () => {
     install(false, 'hermes');
 
     const skillsDir = path.join(targetDir, 'skills');
-    assert.ok(fs.existsSync(skillsDir), 'skills dir exists after install');
+    const categoryDir = path.join(skillsDir, 'gsd');
+    assert.ok(fs.existsSync(categoryDir), 'skills/gsd/ category dir exists after install');
 
-    const installedSkills = fs.readdirSync(skillsDir, { withFileTypes: true })
+    const installedSkills = fs.readdirSync(categoryDir, { withFileTypes: true })
       .filter(e => e.isDirectory() && e.name.startsWith('gsd-'));
     assert.ok(installedSkills.length > 0, `found ${installedSkills.length} gsd-* skill dirs before uninstall`);
 
     uninstall(false, 'hermes');
 
+    assert.ok(!fs.existsSync(categoryDir), 'skills/gsd/ category dir removed by uninstall');
     if (fs.existsSync(skillsDir)) {
-      const remainingGsd = fs.readdirSync(skillsDir, { withFileTypes: true })
+      const remainingFlat = fs.readdirSync(skillsDir, { withFileTypes: true })
         .filter(e => e.isDirectory() && e.name.startsWith('gsd-'));
-      assert.strictEqual(remainingGsd.length, 0,
-        `Expected 0 gsd-* skill dirs after uninstall, found: ${remainingGsd.map(e => e.name).join(', ')}`);
+      assert.strictEqual(remainingFlat.length, 0,
+        `Expected 0 stray flat gsd-* skill dirs after uninstall, found: ${remainingFlat.map(e => e.name).join(', ')}`);
     }
   });
 

@@ -5385,6 +5385,33 @@ function copyCommandsAsClaudeSkills(srcDir, skillsDir, prefix, pathPrefix, runti
 }
 
 /**
+ * Write the Hermes "gsd" category DESCRIPTION.md.
+ * Hermes' skill loader reads DESCRIPTION.md at the top of each skill category
+ * directory and surfaces it in the system prompt so the model knows when to
+ * reach for that category. Per spec in #2841 we collapse all 86 GSD commands
+ * under a single "gsd" category to keep system-prompt overhead bounded.
+ */
+function writeHermesCategoryDescription(categoryDir) {
+  fs.mkdirSync(categoryDir, { recursive: true });
+  const body = [
+    '---',
+    'name: gsd',
+    `version: ${pkg.version}`,
+    'description: Get Shit Done — disciplined planning, execution, and shipping workflows. Use any gsd-* skill in this category to drive a project through new-project → discuss-phase → plan-phase → execute-phase → ship.',
+    '---',
+    '',
+    '# Get Shit Done (GSD)',
+    '',
+    'GSD is a structured development workflow. Skills in this category cover',
+    'project initialization, phase planning, execution, code review, and shipping.',
+    '',
+    'Invoke any `gsd-*` skill in this category to drive the corresponding step.',
+    '',
+  ].join('\n');
+  fs.writeFileSync(path.join(categoryDir, 'DESCRIPTION.md'), body);
+}
+
+/**
  * Recursively install GSD commands as Antigravity skills.
  * Each command becomes a skill-name/ folder containing SKILL.md.
  * Mirrors copyCommandsAsCopilotSkills but uses Antigravity converters.
@@ -6014,10 +6041,22 @@ function uninstall(isGlobal, runtime = 'claude') {
       restoreUserArtifacts(legacyCommandsDir, savedLegacyArtifacts);
     }
   } else if (isHermes) {
-    // Hermes Agent: remove skills/gsd-*/ directories (same layout as Qwen)
+    // Hermes Agent: skills live under skills/gsd/ as a single category (per
+    // spec in #2841). Remove the whole gsd/ category directory; also clean up
+    // any pre-nested-layout flat skills/gsd-*/ left over from older installs.
     const skillsDir = path.join(targetDir, 'skills');
+    let skillCount = 0;
+    const nestedCategoryDir = path.join(skillsDir, 'gsd');
+    if (fs.existsSync(nestedCategoryDir)) {
+      const entries = fs.readdirSync(nestedCategoryDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && entry.name.startsWith('gsd-')) {
+          skillCount++;
+        }
+      }
+      fs.rmSync(nestedCategoryDir, { recursive: true });
+    }
     if (fs.existsSync(skillsDir)) {
-      let skillCount = 0;
       const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
       for (const entry of entries) {
         if (entry.isDirectory() && entry.name.startsWith('gsd-')) {
@@ -6025,10 +6064,10 @@ function uninstall(isGlobal, runtime = 'claude') {
           skillCount++;
         }
       }
-      if (skillCount > 0) {
-        removedCount++;
-        console.log(`  ${green}✓${reset} Removed ${skillCount} Hermes Agent skills`);
-      }
+    }
+    if (skillCount > 0) {
+      removedCount++;
+      console.log(`  ${green}✓${reset} Removed ${skillCount} Hermes Agent skills`);
     }
 
     const legacyCommandsDir = path.join(targetDir, 'commands', 'gsd');
@@ -6665,10 +6704,16 @@ function writeManifest(configDir, runtime = 'claude', options = {}) {
   const isWindsurf = runtime === 'windsurf';
   const isTrae = runtime === 'trae';
   const isCline = runtime === 'cline';
+  const isHermes = runtime === 'hermes';
   const gsdDir = path.join(configDir, 'get-shit-done');
   const commandsDir = path.join(configDir, 'commands', 'gsd');
   const opencodeCommandDir = path.join(configDir, 'command');
-  const codexSkillsDir = path.join(configDir, 'skills');
+  // Hermes nests GSD skills under skills/gsd/ as a single category (#2841).
+  // All other runtimes that use the Codex-style skills layout use a flat skills/ root.
+  const codexSkillsDir = isHermes
+    ? path.join(configDir, 'skills', 'gsd')
+    : path.join(configDir, 'skills');
+  const codexSkillsManifestPrefix = isHermes ? 'skills/gsd/' : 'skills/';
   const agentsDir = path.join(configDir, 'agents');
   const manifest = {
     version: pkg.version,
@@ -6705,7 +6750,14 @@ function writeManifest(configDir, runtime = 'claude', options = {}) {
       const skillRoot = path.join(codexSkillsDir, skillName);
       const skillHashes = generateManifest(skillRoot);
       for (const [rel, hash] of Object.entries(skillHashes)) {
-        manifest.files[`skills/${skillName}/${rel}`] = hash;
+        manifest.files[`${codexSkillsManifestPrefix}${skillName}/${rel}`] = hash;
+      }
+    }
+    // For Hermes, also hash the category DESCRIPTION.md so reinstall detects drift.
+    if (isHermes) {
+      const descPath = path.join(codexSkillsDir, 'DESCRIPTION.md');
+      if (fs.existsSync(descPath)) {
+        manifest.files['skills/gsd/DESCRIPTION.md'] = fileHash(descPath);
       }
     }
   }
@@ -7042,22 +7094,38 @@ function install(isGlobal, runtime = 'claude') {
       restoreUserArtifacts(legacyCommandsDir, savedLegacyArtifacts);
     }
   } else if (isHermes) {
-    // Hermes Agent: reuses Claude-skill-format pipeline (skills/gsd-*/SKILL.md).
-    // Hermes' skill loader accepts unknown frontmatter keys (allowed-tools,
-    // argument-hint) and renders the gsd-* skills under ~/.hermes/skills/.
-    const skillsDir = path.join(targetDir, 'skills');
+    // Hermes Agent: nests all GSD skills under skills/gsd/ as a single
+    // category (per spec in #2841) so the 86 gsd-* skills collapse into a
+    // single entry in Hermes' system prompt instead of 86 top-level entries.
+    // The Claude skill pipeline writes each gsd-<cmd>/SKILL.md inside the
+    // gsd/ category dir, alongside a DESCRIPTION.md that Hermes uses as the
+    // category summary.
+    const hermesSkillsDir = path.join(targetDir, 'skills', 'gsd');
     const gsdSrc = stageSkillsForMode(path.join(src, 'commands', 'gsd'), installMode);
-    copyCommandsAsClaudeSkills(gsdSrc, skillsDir, 'gsd', pathPrefix, runtime, isGlobal);
-    if (fs.existsSync(skillsDir)) {
-      const count = fs.readdirSync(skillsDir, { withFileTypes: true })
+    copyCommandsAsClaudeSkills(gsdSrc, hermesSkillsDir, 'gsd', pathPrefix, runtime, isGlobal);
+    writeHermesCategoryDescription(hermesSkillsDir);
+    if (fs.existsSync(hermesSkillsDir)) {
+      const count = fs.readdirSync(hermesSkillsDir, { withFileTypes: true })
         .filter(e => e.isDirectory() && e.name.startsWith('gsd-')).length;
       if (count > 0) {
-        console.log(`  ${green}✓${reset} Installed ${count} skills to skills/`);
+        console.log(`  ${green}✓${reset} Installed ${count} skills to skills/gsd/`);
       } else {
-        failures.push('skills/gsd-*');
+        failures.push('skills/gsd/gsd-*');
       }
     } else {
-      failures.push('skills/gsd-*');
+      failures.push('skills/gsd/gsd-*');
+    }
+
+    // Migrate any prior flat-layout install (skills/gsd-*/) into the nested
+    // skills/gsd/ category — keeps existing users from carrying duplicates
+    // after upgrading to the nested layout.
+    const flatSkillsDir = path.join(targetDir, 'skills');
+    if (fs.existsSync(flatSkillsDir)) {
+      const stale = fs.readdirSync(flatSkillsDir, { withFileTypes: true })
+        .filter(e => e.isDirectory() && e.name.startsWith('gsd-'));
+      for (const entry of stale) {
+        fs.rmSync(path.join(flatSkillsDir, entry.name), { recursive: true });
+      }
     }
 
     const legacyCommandsDir = path.join(targetDir, 'commands', 'gsd');
@@ -8138,42 +8206,37 @@ function handleStatusline(settings, isInteractive, callback) {
 /**
  * Prompt for runtime selection
  */
-function promptRuntime(callback) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
+/**
+ * Runtime selection options for the interactive installer prompt.
+ * Module-level so tests can import and assert structurally without grepping source.
+ */
+const runtimeMap = {
+  '1': 'claude',
+  '2': 'antigravity',
+  '3': 'augment',
+  '4': 'cline',
+  '5': 'codebuddy',
+  '6': 'codex',
+  '7': 'copilot',
+  '8': 'cursor',
+  '9': 'gemini',
+  '10': 'hermes',
+  '11': 'kilo',
+  '12': 'opencode',
+  '13': 'qwen',
+  '14': 'trae',
+  '15': 'windsurf'
+};
+const allRuntimes = ['claude', 'antigravity', 'augment', 'cline', 'codebuddy', 'codex', 'copilot', 'cursor', 'gemini', 'hermes', 'kilo', 'opencode', 'qwen', 'trae', 'windsurf'];
+const ALL_RUNTIMES_OPTION = '16';
 
-  let answered = false;
-
-  rl.on('close', () => {
-    if (!answered) {
-      answered = true;
-      console.log(`\n  ${yellow}Installation cancelled${reset}\n`);
-      process.exit(0);
-    }
-  });
-
-  const runtimeMap = {
-    '1': 'claude',
-    '2': 'antigravity',
-    '3': 'augment',
-    '4': 'cline',
-    '5': 'codebuddy',
-    '6': 'codex',
-    '7': 'copilot',
-    '8': 'cursor',
-    '9': 'gemini',
-    '10': 'hermes',
-    '11': 'kilo',
-    '12': 'opencode',
-    '13': 'qwen',
-    '14': 'trae',
-    '15': 'windsurf'
-  };
-  const allRuntimes = ['claude', 'antigravity', 'augment', 'cline', 'codebuddy', 'codex', 'copilot', 'cursor', 'gemini', 'hermes', 'kilo', 'opencode', 'qwen', 'trae', 'windsurf'];
-
-  console.log(`  ${yellow}Which runtime(s) would you like to install for?${reset}\n\n  ${cyan}1${reset}) Claude Code  ${dim}(~/.claude)${reset}
+/**
+ * Build the runtime-selection prompt text shown by the interactive installer.
+ * Pure function — no I/O. Exported for tests so they can assert against the
+ * rendered prompt instead of grepping bin/install.js source text.
+ */
+function buildRuntimePromptText() {
+  return `  ${yellow}Which runtime(s) would you like to install for?${reset}\n\n  ${cyan}1${reset}) Claude Code  ${dim}(~/.claude)${reset}
   ${cyan}2${reset}) Antigravity  ${dim}(~/.gemini/antigravity)${reset}
   ${cyan}3${reset}) Augment      ${dim}(~/.augment)${reset}
   ${cyan}4${reset}) Cline        ${dim}(.clinerules)${reset}
@@ -8191,30 +8254,58 @@ function promptRuntime(callback) {
   ${cyan}16${reset}) All
 
   ${dim}Select multiple: 1,2,6 or 1 2 6${reset}
-`);
+`;
+}
+
+/**
+ * Parse user input from the runtime-selection prompt into a runtime list.
+ * Pure function — exported so tests can verify split/dedupe/fallback behavior.
+ *  - Accepts comma- and/or whitespace-separated choices
+ *  - Deduplicates while preserving order
+ *  - Maps option 16 ("All") to every runtime
+ *  - Falls back to ['claude'] when nothing valid is selected
+ */
+function parseRuntimeInput(answer) {
+  const input = (answer == null ? '' : String(answer)).trim() || '1';
+
+  if (input === ALL_RUNTIMES_OPTION) {
+    return allRuntimes.slice();
+  }
+
+  const choices = input.split(/[\s,]+/).filter(Boolean);
+  const selected = [];
+  for (const c of choices) {
+    const runtime = runtimeMap[c];
+    if (runtime && !selected.includes(runtime)) {
+      selected.push(runtime);
+    }
+  }
+
+  return selected.length > 0 ? selected : ['claude'];
+}
+
+function promptRuntime(callback) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  let answered = false;
+
+  rl.on('close', () => {
+    if (!answered) {
+      answered = true;
+      console.log(`\n  ${yellow}Installation cancelled${reset}\n`);
+      process.exit(0);
+    }
+  });
+
+  console.log(buildRuntimePromptText());
 
   rl.question(`  Choice ${dim}[1]${reset}: `, (answer) => {
     answered = true;
     rl.close();
-    const input = answer.trim() || '1';
-
-    // "All" shortcut
-    if (input === '16') {
-      callback(allRuntimes);
-      return;
-    }
-
-    // Parse comma-separated, space-separated, or single choice
-    const choices = input.split(/[\s,]+/).filter(Boolean);
-    const selected = [];
-    for (const c of choices) {
-      const runtime = runtimeMap[c];
-      if (runtime && !selected.includes(runtime)) {
-        selected.push(runtime);
-      }
-    }
-
-    callback(selected.length > 0 ? selected : ['claude']);
+    callback(parseRuntimeInput(answer));
   });
 }
 
@@ -8844,6 +8935,10 @@ if (process.env.GSD_TEST_MODE) {
     finishInstall,
     homePathCoveredByRc,
     maybeSuggestPathExport,
+    runtimeMap,
+    allRuntimes,
+    parseRuntimeInput,
+    buildRuntimePromptText,
   };
 } else {
 
@@ -8857,7 +8952,12 @@ if (process.env.GSD_TEST_MODE) {
       process.exit(1);
     }
     const globalDir = getGlobalDir(runtimeArg, null);
-    console.log(path.join(globalDir, 'skills'));
+    // Hermes nests GSD skills under skills/gsd/ as a single category (#2841).
+    // Other runtimes use a flat skills/ root.
+    const skillsRoot = runtimeArg === 'hermes'
+      ? path.join(globalDir, 'skills', 'gsd')
+      : path.join(globalDir, 'skills');
+    console.log(skillsRoot);
   } else if (hasGlobal && hasLocal) {
     console.error(`  ${yellow}Cannot specify both --global and --local${reset}`);
     process.exit(1);
