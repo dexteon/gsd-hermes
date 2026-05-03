@@ -27,3 +27,9 @@ Module owning projection from dispatch results/errors to CLI `{ exitCode, stdout
 
 ### Query Command Resolution Module
 Canonical command normalization and resolution Interface (`query-command-resolution-strategy`) used by internal query/transport paths after dead-wrapper convergence.
+
+### Command Topology Module
+Module owning command resolution, policy projection (`mutation`, `output_mode`), unknown-command diagnosis, and handler Adapter binding at one seam for query dispatch.
+
+### Query Pre-Project Config Policy Module
+Module policy that defines query-time behavior when `.planning/config.json` is absent: use built-in defaults for parity-sensitive query Interfaces, and emit parity-aligned empty model ids for pre-project model resolution surfaces.
