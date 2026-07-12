@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const FALLBACK_ALIASES: Readonly<Record<string, string[]>> = {
+  hermes: ['hermes', 'hermes-agent', 'hermes-cli'],
   claude: ['claude', 'claude-code', 'claude-cli'],
   opencode: ['opencode', 'open-code', 'opencode-cli'],
   kilo: ['kilo', 'kilo-cli'],
@@ -26,7 +27,6 @@ const FALLBACK_ALIASES: Readonly<Record<string, string[]>> = {
   augment: ['augment', 'augment-code', 'augment-cli'],
   trae: ['trae', 'trae-cli'],
   qwen: ['qwen', 'qwen-code', 'qwen-cli'],
-  hermes: ['hermes', 'hermes-agent', 'hermes-cli'],
   kimi: ['kimi'],
   codebuddy: ['codebuddy', 'codebuddy-cli'],
   cline: ['cline', 'cline-cli'],
@@ -292,8 +292,8 @@ export function getGlobalConfigHomeFragment(runtime: string): string {
 // cross-runtime agents-dispatch table (out of scope for #2094, which only
 // folds the shared-hooks-install skip).
 const RUNTIME_FLAG_IDS = Object.freeze([
-  'opencode', 'kilo', 'codex', 'copilot', 'antigravity', 'cursor',
-  'windsurf', 'augment', 'trae', 'qwen', 'hermes', 'codebuddy', 'cline', 'kimi', 'zcode', 'pi',
+  'hermes', 'opencode', 'kilo', 'codex', 'copilot', 'antigravity', 'cursor',
+  'windsurf', 'augment', 'trae', 'qwen', 'codebuddy', 'cline', 'kimi', 'zcode', 'pi',
 ] as const);
 
 /**

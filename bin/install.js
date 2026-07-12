@@ -164,7 +164,7 @@ function isCodexHooksFeatureKey(key) {
 // GSD entries are appended only when not already present (idempotent).
 // The reference/default runtime (ADR-1239 reference host). Single-sourced here
 // instead of scattered literal 'claude' defaults/rosters (#2086).
-const DEFAULT_RUNTIME = 'claude';
+const DEFAULT_RUNTIME = 'hermes';
 const GSD_CLAUDE_ALLOW_PERMISSIONS = Object.freeze([
   'Bash(npx gsd-core *)',
   'Read(.planning/*)',
@@ -11320,15 +11320,15 @@ function handleStatusline(settings, isInteractive, callback) {
  * Module-level so tests can import and assert structurally without grepping source.
  */
 const runtimeMap = {
-  '1': 'claude',
-  '2': 'antigravity',
-  '3': 'augment',
-  '4': 'cline',
-  '5': 'codebuddy',
-  '6': 'codex',
-  '7': 'copilot',
-  '8': 'cursor',
-  '9': 'hermes',
+  '1': 'hermes',
+  '2': 'claude',
+  '3': 'antigravity',
+  '4': 'augment',
+  '5': 'cline',
+  '6': 'codebuddy',
+  '7': 'codex',
+  '8': 'copilot',
+  '9': 'cursor',
   '10': 'kimi',
   '11': 'kilo',
   '12': 'opencode',
@@ -11338,7 +11338,7 @@ const runtimeMap = {
   '16': 'windsurf',
   '17': 'zcode'
 };
-const allRuntimes = ['claude', 'antigravity', 'augment', 'cline', 'codebuddy', 'codex', 'copilot', 'cursor', 'hermes', 'kimi', 'kilo', 'opencode', 'pi', 'qwen', 'trae', 'windsurf', 'zcode'];
+const allRuntimes = ['hermes', 'claude', 'antigravity', 'augment', 'cline', 'codebuddy', 'codex', 'copilot', 'cursor', 'kimi', 'kilo', 'opencode', 'pi', 'qwen', 'trae', 'windsurf', 'zcode'];
 const ALL_RUNTIMES_OPTION = '18';
 
 /**
@@ -11347,15 +11347,15 @@ const ALL_RUNTIMES_OPTION = '18';
  * rendered prompt instead of grepping bin/install.js source text.
  */
 function buildRuntimePromptText() {
-  return `  ${yellow}Which runtime(s) would you like to install for?${reset}\n\n  ${cyan}1${reset}) Claude Code  ${dim}(~/.claude)${reset}
-  ${cyan}2${reset}) Antigravity  ${dim}(~/.gemini/antigravity)${reset}
-  ${cyan}3${reset}) Augment      ${dim}(~/.augment)${reset}
-  ${cyan}4${reset}) Cline        ${dim}(.clinerules)${reset}
-  ${cyan}5${reset}) CodeBuddy    ${dim}(~/.codebuddy)${reset}
-  ${cyan}6${reset}) Codex        ${dim}(~/.codex)${reset}
-  ${cyan}7${reset}) Copilot      ${dim}(~/.copilot)${reset}
-  ${cyan}8${reset}) Cursor       ${dim}(~/.cursor)${reset}
-  ${cyan}9${reset}) Hermes Agent ${dim}(~/.hermes)${reset}
+  return `  ${yellow}Which runtime(s) would you like to install for?${reset}\n\n  ${cyan}1${reset}) Hermes Agent ${dim}(~/.hermes)${reset}
+  ${cyan}2${reset}) Claude Code  ${dim}(~/.claude)${reset}
+  ${cyan}3${reset}) Antigravity  ${dim}(~/.gemini/antigravity)${reset}
+  ${cyan}4${reset}) Augment      ${dim}(~/.augment)${reset}
+  ${cyan}5${reset}) Cline        ${dim}(.clinerules)${reset}
+  ${cyan}6${reset}) CodeBuddy    ${dim}(~/.codebuddy)${reset}
+  ${cyan}7${reset}) Codex        ${dim}(~/.codex)${reset}
+  ${cyan}8${reset}) Copilot      ${dim}(~/.copilot)${reset}
+  ${cyan}9${reset}) Cursor       ${dim}(~/.cursor)${reset}
   ${cyan}10${reset}) Kimi         ${dim}(~/.config/agents, then ~/.agents if existing)${reset}
   ${cyan}11${reset}) Kilo         ${dim}(~/.config/kilo)${reset}
   ${cyan}12${reset}) OpenCode     ${dim}(~/.config/opencode)${reset}

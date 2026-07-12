@@ -3,8 +3,8 @@
   "role": "runtime",
   "version": "1.7.0-rc.5",
   "title": "Hermes Agent",
-  "description": "Hermes Agent (NousResearch) — skills nest under skills/gsd/ category bucket; nested skill layout; settings-json hook surface; Claude hook event dialect; tier-2 support.",
-  "tier": "core",
+  "description": "Hermes Agent (NousResearch) — primary runtime for GSD Hermes; skills nest under skills/gsd/ category bucket; nested skill layout; settings-json hook surface; Claude hook event dialect; tier-1 support.",
+  "tier": "primary",
   "requires": [],
   "engines": {
     "gsd": ">=1.6.0"
@@ -45,7 +45,7 @@
     "hooksSurface": "settings-json",
     "hookEvents": "claude",
     "sandboxTier": "none",
-    "supportTier": 2,
+    "supportTier": 1,
     "installSurface": "settings-json",
     "writesSharedSettings": true,
     "permissionWriter": null,

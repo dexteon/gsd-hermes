@@ -1,7 +1,7 @@
 {
-  "name": "@opengsd/gsd-core",
+  "name": "@dexteon/gsd-hermes",
   "version": "1.7.0-rc.5",
-  "description": "GSD Core is a meta-prompting, context engineering, and spec-driven development system for AI coding agents.",
+  "description": "GSD Hermes is a meta-prompting, context engineering, and spec-driven development system for Hermes Agent and other AI coding agents.",
   "main": ".opencode/plugins/gsd-core.js",
   "bin": {
     "gsd-core": "bin/install.js",
@@ -24,6 +24,8 @@
     "pi"
   ],
   "keywords": [
+    "hermes",
+    "hermes-agent",
     "claude",
     "claude-code",
     "ai",
@@ -33,15 +35,15 @@
     "codex",
     "codex-cli"
   ],
-  "author": "OpenGSD",
+  "author": "Teon Moore",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/open-gsd/gsd-core.git"
+    "url": "git+https://github.com/dexteon/gsd-hermes.git"
   },
-  "homepage": "https://github.com/open-gsd/gsd-core",
+  "homepage": "https://github.com/dexteon/gsd-hermes",
   "bugs": {
-    "url": "https://github.com/open-gsd/gsd-core/issues"
+    "url": "https://github.com/dexteon/gsd-hermes/issues"
   },
   "publishConfig": {
     "access": "public"
