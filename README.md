@@ -1,27 +1,27 @@
 <div align="center">
 
-# GSD Core
+# GSD Hermes
 
 **Git. Ship. Done.**
 
 **English** · [Português](README.pt-BR.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja-JP.md) · [한국어](README.ko-KR.md)
 
-**A light-weight meta-prompting, context engineering, and spec-driven development system for Claude Code, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more.**
+**A light-weight meta-prompting, context engineering, and spec-driven development system for Hermes Agent, Claude Code, OpenCode, Codex, Copilot, Cursor, Windsurf, and more.**
 
-[![npm version](https://img.shields.io/npm/v/%40opengsd%2Fgsd-core?style=for-the-badge&logo=npm&logoColor=white&color=CB3837)](https://www.npmjs.com/package/@opengsd/gsd-core)
-[![npm downloads](https://img.shields.io/npm/dm/%40opengsd%2Fgsd-core?style=for-the-badge&logo=npm&logoColor=white&color=CB3837)](https://www.npmjs.com/package/@opengsd/gsd-core)
-[![Tests](https://img.shields.io/github/actions/workflow/status/open-gsd/gsd-core/test.yml?branch=main&style=for-the-badge&logo=github&label=Tests)](https://github.com/open-gsd/gsd-core/actions/workflows/test.yml)
+[![npm version](https://img.shields.io/npm/v/%40dexteon%2Fgsd-hermes?style=for-the-badge&logo=npm&logoColor=white&color=CB3837)](https://www.npmjs.com/package/@dexteon/gsd-hermes)
+[![npm downloads](https://img.shields.io/npm/dm/%40dexteon%2Fgsd-hermes?style=for-the-badge&logo=npm&logoColor=white&color=CB3837)](https://www.npmjs.com/package/@dexteon/gsd-hermes)
+[![Tests](https://img.shields.io/github/actions/workflow/status/dexteon/gsd-hermes/test.yml?branch=main&style=for-the-badge&logo=github&label=Tests)](https://github.com/dexteon/gsd-hermes/actions/workflows/test.yml)
 [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/mYgfVNfA2r)
-[![GitHub stars](https://img.shields.io/github/stars/open-gsd/gsd-core?style=for-the-badge&logo=github&color=181717)](https://github.com/open-gsd/gsd-core)
+[![GitHub stars](https://img.shields.io/github/stars/dexteon/gsd-hermes?style=for-the-badge&logo=github&color=181717)](https://github.com/dexteon/gsd-hermes)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 
 </div>
 
 ---
 
-## What is GSD Core
+## What is GSD Hermes
 
-GSD Core is a context-engineering and spec-driven development framework that drives AI coding agents (Claude Code, Codex, Antigravity CLI, Kimi CLI, Copilot, Cursor, and more) through a disciplined phase loop. It solves [context rot](docs/explanation/context-engineering.md) — the quality degradation that accumulates as an AI fills its context window — by running all heavy research, planning, and execution work in fresh-context subagents while keeping your main session lean.
+GSD Hermes is a context-engineering and spec-driven development framework that drives AI coding agents (Hermes Agent, Claude Code, Codex, Copilot, Cursor, and more) through a disciplined phase loop. It solves [context rot](docs/explanation/context-engineering.md) — the quality degradation that accumulates as an AI fills its context window — by running all heavy research, planning, and execution work in fresh-context subagents while keeping your main session lean.
 
 ---
 
@@ -40,10 +40,10 @@ Each milestone repeats the same five-step loop, one phase at a time:
 ## Quickstart
 
 ```bash
-npx @opengsd/gsd-core@latest
+npx @dexteon/gsd-hermes@latest
 ```
 
-The installer prompts for your runtime (Claude Code, OpenCode, Antigravity CLI, Kimi CLI, Kilo, Codex, Copilot, Cursor, Windsurf, and more) and whether to install globally or locally. The installer is required for cross-runtime compatibility — do not copy files from `agents/` or `commands/` directly.
+The installer prompts for your runtime (Hermes Agent, Claude Code, OpenCode, Codex, Copilot, Cursor, Windsurf, and more) and whether to install globally or locally. The installer is required for cross-runtime compatibility — do not copy files from `agents/` or `commands/` directly.
 
 On another runtime or without Node.js? See [Install on your runtime](docs/how-to/install-on-your-runtime.md).
 
@@ -103,11 +103,11 @@ Troubleshooting? See [docs/how-to/recover-and-troubleshoot.md](docs/how-to/recov
 
 ## Star History
 
-<a href="https://star-history.com/#open-gsd/gsd-core&Date">
+<a href="https://star-history.com/#dexteon/gsd-hermes&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=open-gsd/gsd-core&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=open-gsd/gsd-core&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=open-gsd/gsd-core&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=dexteon/gsd-hermes&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=dexteon/gsd-hermes&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=dexteon/gsd-hermes&type=Date" />
  </picture>
 </a>
 
@@ -121,6 +121,6 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-**Claude Code is powerful. GSD Core makes it reliable.**
+**Hermes Agent is powerful. GSD Hermes makes it reliable.**
 
 </div>
